@@ -454,9 +454,7 @@ class NextClassCard extends StatelessWidget {
 
     // Calculate time until class
     final now = DateTime.now();
-    final parts = entry.startTime.split(':');
-    final classHour = int.parse(parts[0]);
-    final classMinute = int.parse(parts[1]);
+    final (classHour, classMinute) = entry.startTimeParts;
 
     final isSameDay = targetDay == null || targetDay == currentDay;
     int diffMinutes = 0;
