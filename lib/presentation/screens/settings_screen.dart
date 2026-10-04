@@ -269,6 +269,7 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
 
+
             // ── About & Developer Card ──
             SliverToBoxAdapter(
               child: Container(

@@ -7,6 +7,7 @@ library;
 import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import '../../domain/entities/schedule_entry.dart';
@@ -43,23 +44,104 @@ class NotificationService {
         const InitializationSettings(android: androidSettings, iOS: iosSettings),
       );
 
+      // Explicitly register notification channels for Android 8.0+
+      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        await androidPlugin.createNotificationChannel(
+          const AndroidNotificationChannel(
+            AppConstants.notificationChannelId,
+            AppConstants.notificationChannelName,
+            description: AppConstants.notificationChannelDesc,
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+        await androidPlugin.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'met_welcome_channel',
+            'Senior Welcome',
+            description: 'Senior 2027 Welcome Notification',
+            importance: Importance.max,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+        await androidPlugin.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'met_friday_channel',
+            'Friday Reminders',
+            description: 'Reminders for Friday Sunan and Azkar',
+            importance: Importance.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
+      }
+
       _initialized = true;
     } catch (e) {
       debugPrint('[NotificationService] Initialization error: $e');
     }
   }
 
-  /// Requests notification permission on Android 13+.
-  /// Returns `true` if granted.
+  /// Requests notification permission on iOS and Android 13+.
+  /// Returns `true` if granted or if running on Android <= 12 where permission is granted by default.
   Future<bool> requestPermission() async {
+    if (Platform.isIOS) {
+      final iosPlugin = _plugin.resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin>();
+      if (iosPlugin != null) {
+        final granted = await iosPlugin.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? true;
+      }
+      return true;
+    }
+
     if (!Platform.isAndroid) return true;
 
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin == null) return false;
+    if (androidPlugin == null) return true;
 
-    final granted = await androidPlugin.requestNotificationsPermission();
-    return granted ?? false;
+    try {
+      final granted = await androidPlugin.requestNotificationsPermission();
+      // On Android <= 12, this returns null because permission is granted at install time.
+      if (granted == null) return true;
+      return granted;
+    } catch (e) {
+      debugPrint('[NotificationService] requestNotificationsPermission note: $e');
+      return true;
+    }
+  }
+
+  /// Checks whether exact alarms are permitted (Android 12+).
+  /// On Android 11 or lower, returns true.
+  Future<bool> canScheduleExactNotifications() async {
+    if (!Platform.isAndroid) return true;
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return true;
+    try {
+      final canExact = await androidPlugin.canScheduleExactNotifications();
+      return canExact ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  /// Requests exact alarms permission on Android 13/14+.
+  Future<bool> requestExactAlarmsPermission() async {
+    if (!Platform.isAndroid) return true;
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    if (androidPlugin == null) return false;
+    return await androidPlugin.requestExactAlarmsPermission() ?? false;
   }
 
   /// Sends an immediate test notification to verify notification permissions and display.
@@ -163,6 +245,9 @@ class NotificationService {
   /// Schedules weekly recurring notifications for every entry in [entries].
   Future<void> scheduleAllNotifications(List<ScheduleEntry> entries) async {
     try {
+      await init();
+      await requestPermission();
+
       // Cancel all existing before re-scheduling to avoid duplicates.
       await _plugin.cancelAll();
 
@@ -190,6 +275,9 @@ class NotificationService {
       reminderMinute += 60;
       reminderHour -= 1;
     }
+    if (reminderHour < 0) {
+      reminderHour += 24;
+    }
 
     final dartWeekday = _dayToWeekday(entry.day);
     if (dartWeekday == null) return;
@@ -210,8 +298,10 @@ class NotificationService {
       AppConstants.notificationChannelId,
       AppConstants.notificationChannelName,
       channelDescription: AppConstants.notificationChannelDesc,
-      importance: Importance.high,
+      importance: Importance.max,
       priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
       styleInformation: BigTextStyleInformation(body),
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
@@ -224,6 +314,7 @@ class NotificationService {
     );
 
     try {
+      final canExact = await canScheduleExactNotifications();
       await _plugin.zonedSchedule(
         id,
         title,
@@ -232,11 +323,27 @@ class NotificationService {
         NotificationDetails(android: androidDetails, iOS: iosDetails),
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: canExact
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
     } catch (e) {
-      debugPrint('[NotificationService] Failed to schedule #$id: $e');
+      try {
+        await _plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          scheduledDate,
+          NotificationDetails(android: androidDetails, iOS: iosDetails),
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+      } catch (inner) {
+        debugPrint('[NotificationService] Failed to schedule #$id: $inner');
+      }
     }
   }
 
@@ -276,8 +383,7 @@ class NotificationService {
   Future<void> showSeniorWelcomeNotification() async {
     try {
       await init();
-      final granted = await requestPermission();
-      if (!granted) return;
+      await requestPermission();
 
       const androidDetails = AndroidNotificationDetails(
         'met_welcome_channel',
@@ -304,8 +410,22 @@ class NotificationService {
         'نتمنى لك فصلاً دراسياً موفقاً وتخرجاً بامتياز إن شاء الله! 🥳🚀',
         const NotificationDetails(android: androidDetails, iOS: iosDetails),
       );
+      debugPrint('[NotificationService] Senior welcome notification sent successfully');
     } catch (e) {
       debugPrint('[NotificationService] Error showing welcome notification: $e');
+    }
+  }
+
+  /// Automatically displays the Senior 2027 welcome notification on the user's first launch.
+  Future<void> checkAndShowSeniorWelcomeOnFirstLaunch(SharedPreferences prefs) async {
+    const key = 'has_shown_senior_welcome_v2';
+    final alreadyShown = prefs.getBool(key) ?? false;
+    if (!alreadyShown) {
+      await prefs.setBool(key, true);
+      // Brief delay to allow initial UI transition and Android notification service warmup
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        showSeniorWelcomeNotification();
+      });
     }
   }
 }

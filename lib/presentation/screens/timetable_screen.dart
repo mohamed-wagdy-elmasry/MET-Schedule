@@ -3,11 +3,13 @@
 /// and smooth custom pill tab weekly navigation in both Dark and Light modes.
 library;
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
+import '../../domain/entities/schedule_entry.dart';
 import '../bloc/schedule_cubit.dart';
 import '../bloc/preferences_cubit.dart';
 import '../widgets/friday_hub_widget.dart';
@@ -39,15 +41,60 @@ class TimetableScreen extends StatelessWidget {
 
 // ── Today View ──
 
-class _TodayView extends StatelessWidget {
+class _TodayView extends StatefulWidget {
   final ScheduleState state;
   const _TodayView({required this.state});
 
   @override
+  State<_TodayView> createState() => _TodayViewState();
+}
+
+class _TodayViewState extends State<_TodayView> {
+  Timer? _timer;
+  bool _showCompletedClasses = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Live timer ticking every 20 seconds so end of day and upcoming times update automatically
+    _timer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  bool _isSchoolDayFinished(List<ScheduleEntry> entries) {
+    if (entries.isEmpty) return false;
+    final now = DateTime.now();
+    final nowMinutes = now.hour * 60 + now.minute;
+
+    int maxEndMinutes = 0;
+    bool hasAcademicSessions = false;
+    for (final entry in entries) {
+      if (entry.type == 'rest' || entry.type == 'project') continue;
+      hasAcademicSessions = true;
+      final (h, m) = entry.endTimeParts;
+      final endMinutes = h * 60 + m;
+      if (endMinutes > maxEndMinutes) {
+        maxEndMinutes = endMinutes;
+      }
+    }
+
+    return hasAcademicSessions && nowMinutes >= maxEndMinutes;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final state = widget.state;
     final loc = AppLocalizations.of(context);
     final prefs = context.watch<PreferencesCubit>().state;
     final isDark = AppTheme.isDark(context);
+    final isDayFinished = _isSchoolDayFinished(state.todayEntries);
 
     // ── Dedicated Friday View ──
     if (state.isFriday) {
@@ -194,73 +241,74 @@ class _TodayView extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _InfoChip(
-                      icon: Icons.groups_rounded,
-                      label: '${loc.groupLabel} ${prefs.group}',
-                      color: AppTheme.primary,
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.bgCard.withValues(alpha: 0.6) : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
                     ),
-                    const SizedBox(width: 8),
-                    _InfoChip(
-                      icon: Icons.tag_rounded,
-                      label: '${loc.sectionLabel} ${prefs.section}',
-                      color: isDark ? AppTheme.accent : AppTheme.labColorLight,
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.08),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _InfoPill(
+                          icon: Icons.groups_rounded,
+                          label: '${loc.groupLabel} ${prefs.group}',
+                          color: AppTheme.primary,
                         ),
                       ),
-                      child: Text(
-                        '${state.todayEntries.length} ${loc.isArabic ? "محاضرات اليوم" : "classes"}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.getTextSecondary(context),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _InfoPill(
+                          icon: Icons.tag_rounded,
+                          label: '${loc.sectionLabel} ${prefs.section}',
+                          color: isDark ? AppTheme.accent : const Color(0xFF0284C7),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: _InfoPill(
+                          icon: Icons.event_note_rounded,
+                          label: '${state.todayEntries.length} ${loc.isArabic ? "محاضرات" : "classes"}',
+                          color: isDark ? const Color(0xFF10B981) : const Color(0xFF059669),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
           ),
         ),
 
-        // Smart Next Class Hero
-        if (state.nextClass != null)
-          SliverToBoxAdapter(
-            child: NextClassCard(
-              entry: state.nextClass!,
-              currentDay: state.currentDay,
-              targetDay: state.nextClassDay,
-            ),
-          ),
-
-        // Today's Classes List
-        if (state.todayEntries.isEmpty)
+        // If the school day has finished today:
+        if (isDayFinished && !_showCompletedClasses)
           SliverFillRemaining(
             hasScrollBody: false,
             child: Center(
               child: Container(
-                margin: const EdgeInsets.all(28),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
                 decoration: BoxDecoration(
-                  color: isDark ? AppTheme.bgCard.withValues(alpha: 0.6) : Colors.white,
+                  color: isDark ? AppTheme.bgCard : Colors.white,
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
-                    color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0),
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                    width: 1.5,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                      color: isDark ? Colors.black.withValues(alpha: 0.25) : const Color(0xFF64748B).withValues(alpha: 0.08),
                       blurRadius: 20,
                       offset: const Offset(0, 4),
                     ),
@@ -270,71 +318,345 @@ class _TodayView extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 64,
-                      height: 64,
+                      width: 70,
+                      height: 70,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: AppTheme.primary.withValues(alpha: isDark ? 0.15 : 0.1),
+                        gradient: LinearGradient(
+                          colors: [
+                            AppTheme.primary.withValues(alpha: isDark ? 0.25 : 0.15),
+                            (isDark ? AppTheme.accent : AppTheme.primary).withValues(alpha: isDark ? 0.15 : 0.08),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: AppTheme.primary.withValues(alpha: 0.35),
+                          width: 1.5,
+                        ),
                       ),
                       child: const Center(
-                        child: Text('🎉', style: TextStyle(fontSize: 32)),
+                        child: Text('🎉', style: TextStyle(fontSize: 34)),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      loc.isArabic ? 'لا توجد محاضرات اليوم!' : loc.noClassesToday,
+                      loc.isArabic ? 'تم الانتهاء من اليوم الدراسي' : 'School Day Completed',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
                         color: AppTheme.getTextPrimary(context),
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       loc.isArabic
-                          ? 'استمتع بيومك في المذاكرة أو الراحة والعمل على مشروع التخرج ☕'
-                          : 'Enjoy your day resting or studying!',
+                          ? 'انتهت جميع المحاضرات والسكاشن المقررة لهذا اليوم.\nأحسنت عملاً ونتمنى لك وقتاً ممتعاً وإنجازاً موفقاً! ✨'
+                          : 'All classes and sections for today have ended.\nWell done and enjoy your time! ✨',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
+                        height: 1.5,
                         color: AppTheme.getTextSecondary(context),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    OutlinedButton.icon(
-                      onPressed: () => EditSessionModal.show(
-                        context,
-                        initialDay: state.currentDay,
-                        initialGroup: prefs.group,
+                    if (state.nextClass != null) ...[
+                      const SizedBox(height: 20),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.bgDark.withValues(alpha: 0.6) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: isDark ? 0.20 : 0.12),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.next_plan_rounded, size: 20, color: AppTheme.primary),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    loc.isArabic
+                                        ? 'موعدك القادم (${_dayDisplayLabel(state.nextClassDay ?? '', loc)})'
+                                        : 'Next Session (${_dayDisplayLabel(state.nextClassDay ?? '', loc)})',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.primary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    state.nextClass!.subjectName(loc.isArabic),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.getTextPrimary(context),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${state.nextClass!.startTime} • ${state.nextClass!.locationName(loc.isArabic)}',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: AppTheme.getTextSecondary(context),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      style: OutlinedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
-                      icon: const Icon(Icons.add_rounded, size: 18),
-                      label: Text(
-                        loc.isArabic ? 'إضافة محاضرة جديدة' : 'Add New Lecture',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
+                    ],
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => context.read<ScheduleCubit>().toggleView(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          ),
+                          icon: const Icon(Icons.calendar_view_week_rounded, size: 16),
+                          label: Text(
+                            loc.isArabic ? 'جدول الأسبوع' : 'Full Week',
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        OutlinedButton.icon(
+                          onPressed: () => setState(() => _showCompletedClasses = true),
+                          style: OutlinedButton.styleFrom(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          ),
+                          icon: const Icon(Icons.history_rounded, size: 16),
+                          label: Text(
+                            loc.isArabic ? 'عرض حصيلة اليوم' : 'Today Summary',
+                            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ),
           )
-        else
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final entry = state.todayEntries[index];
-                return ScheduleCard(
-                  entry: entry,
-                  isHighlighted: !entry.isForAllSections,
-                );
-              },
-              childCount: state.todayEntries.length,
+        else ...[
+          // Smart Next Class Hero (only shown if the next class is TODAY)
+          if (state.nextClass != null && state.nextClassDay == state.currentDay) ...[
+            SliverToBoxAdapter(
+              child: NextClassCard(
+                entry: state.nextClass!,
+                currentDay: state.currentDay,
+                targetDay: state.nextClassDay,
+              ),
             ),
-          ),
+            // Distinct Separator between Next Class Hero and Daily Schedule List
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 1.5,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.15),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppTheme.bgCard : const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFE2E8F0),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.format_list_bulleted_rounded,
+                              size: 13,
+                              color: isDark ? AppTheme.accent : AppTheme.primary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              loc.isArabic ? 'جدول محاضرات اليوم الكامل' : "Today's Full Schedule",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.getTextPrimary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Container(
+                        height: 1.5,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.15),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+
+          if (_showCompletedClasses)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      loc.isArabic ? 'محاضرات اليوم المنتهية:' : 'Completed classes for today:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.getTextSecondary(context),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => setState(() => _showCompletedClasses = false),
+                      icon: const Icon(Icons.check_circle_outline_rounded, size: 15),
+                      label: Text(
+                        loc.isArabic ? 'إخفاء' : 'Hide',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Today's Classes List
+          if (state.todayEntries.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Container(
+                  margin: const EdgeInsets.all(28),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppTheme.bgCard.withValues(alpha: 0.6) : Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(
+                      color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0),
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.primary.withValues(alpha: isDark ? 0.15 : 0.1),
+                        ),
+                        child: const Center(
+                          child: Text('🎉', style: TextStyle(fontSize: 32)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        loc.isArabic ? 'لا توجد محاضرات اليوم!' : loc.noClassesToday,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.getTextPrimary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        loc.isArabic
+                            ? 'استمتع بيومك في المذاكرة أو الراحة والعمل على مشروع التخرج ☕'
+                            : 'Enjoy your day resting or studying!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.getTextSecondary(context),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      OutlinedButton.icon(
+                        onPressed: () => EditSessionModal.show(
+                          context,
+                          initialDay: state.currentDay,
+                          initialGroup: prefs.group,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        ),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: Text(
+                          loc.isArabic ? 'إضافة محاضرة جديدة' : 'Add New Lecture',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final entry = state.todayEntries[index];
+                  return ScheduleCard(
+                    entry: entry,
+                    isHighlighted: !entry.isForAllSections,
+                  );
+                },
+                childCount: state.todayEntries.length,
+              ),
+            ),
+        ],
 
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
@@ -642,6 +964,53 @@ class _InfoChip extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _InfoPill({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isDark ? 0.14 : 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withValues(alpha: isDark ? 0.28 : 0.22),
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 15, color: color),
+          const SizedBox(width: 5),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                color: color,
+              ),
             ),
           ),
         ],

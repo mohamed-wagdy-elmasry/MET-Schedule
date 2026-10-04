@@ -94,11 +94,11 @@ class AppTheme {
   static const Color accent = Color(0xFF00D9FF);
   static const Color accentAlt = Color(0xFF00E5A0);
 
-  // ── Surface / Background (Dark Mode) ──
-  static const Color bgDark = Color(0xFF0D0D1A);
-  static const Color bgCard = Color(0xFF1A1A2E);
-  static const Color bgCardLight = Color(0xFF222240);
-  static const Color bgSurface = Color(0xFF16162A);
+  // ── Surface / Background (Dark Mode - Eye-Comfort Slate Palette) ──
+  static const Color bgDark = Color(0xFF0F172A); // Smooth Slate 900
+  static const Color bgCard = Color(0xFF1E293B); // Slate 800
+  static const Color bgCardLight = Color(0xFF334155); // Slate 700
+  static const Color bgSurface = Color(0xFF141E33); // Comfort Midnight Slate
 
   // ── Surface / Background (Light Mode) ──
   static const Color bgLight = Color(0xFFF6F8FC);
@@ -107,9 +107,9 @@ class AppTheme {
   static const Color bgSurfaceLight = Color(0xFFFFFFFF);
 
   // ── Text (Dark Mode) ──
-  static const Color textPrimary = Color(0xFFF0F0FF);
-  static const Color textSecondary = Color(0xFFA0A0C0);
-  static const Color textHint = Color(0xFF666688);
+  static const Color textPrimary = Color(0xFFF8FAFC); // High legibility soft white
+  static const Color textSecondary = Color(0xFF94A3B8); // Soft eye-friendly slate
+  static const Color textHint = Color(0xFF64748B);
 
   // ── Text (Light Mode) ──
   static const Color textPrimaryLight = Color(0xFF191D31);

@@ -2,9 +2,13 @@
 /// Fully adapts to both Dark and Light modes.
 library;
 
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
@@ -227,6 +231,7 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<Map<String, dynamic>> _directory = [];
+  List<Map<String, dynamic>> _userPhotos = [];
   bool _loading = true;
   String _searchQuery = '';
   String _selectedFilter = 'all'; // 'all', 'hall', 'room', 'lab'
@@ -234,8 +239,9 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadData();
+    _loadUserPhotos();
   }
 
   @override
@@ -252,6 +258,128 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
     });
   }
 
+  Future<void> _loadUserPhotos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('custom_campus_photos');
+      if (raw != null) {
+        final list = json.decode(raw) as List;
+        setState(() {
+          _userPhotos = list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('[CampusDirectory] Error loading user photos: $e');
+    }
+  }
+
+  Future<void> _saveUserPhotos() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = json.encode(_userPhotos);
+      await prefs.setString('custom_campus_photos', raw);
+    } catch (e) {
+      debugPrint('[CampusDirectory] Error saving user photos: $e');
+    }
+  }
+
+  Future<void> _pickAndAddPhoto(ImageSource source) async {
+    final isArabic = AppLocalizations.of(context).isArabic;
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1920,
+      );
+      if (pickedFile == null || !mounted) return;
+
+      final titleController = TextEditingController();
+
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(isArabic ? 'إضافة صورة للحرم الجامعي' : 'Add Campus Photo'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(pickedFile.path),
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: titleController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  labelText: isArabic ? 'اسم القاعة أو المكان' : 'Place Name / Description',
+                  hintText: isArabic ? 'مثال: مدرج د، معمل 3، مدخل المبنى...' : 'e.g., Hall D, Lab 3...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text(isArabic ? 'حفظ الصورة' : 'Save Photo'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true && mounted) {
+        final title = titleController.text.trim().isNotEmpty
+            ? titleController.text.trim()
+            : (isArabic ? 'صورة في الحرم الجامعي' : 'Campus Photo');
+
+        setState(() {
+          _userPhotos.insert(0, {
+            'id': DateTime.now().millisecondsSinceEpoch.toString(),
+            'path': pickedFile.path,
+            'title': title,
+            'date': DateTime.now().toIso8601String(),
+          });
+        });
+        await _saveUserPhotos();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(isArabic ? 'تمت إضافة الصورة بنجاح! 📸' : 'Photo added successfully! 📸'),
+              backgroundColor: AppTheme.primary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('[CampusDirectory] Error picking photo: $e');
+    }
+  }
+
+  Future<void> _deleteUserPhoto(int index) async {
+    setState(() {
+      _userPhotos.removeAt(index);
+    });
+    await _saveUserPhotos();
+  }
+
   void _openImageViewer(String imagePath, String title) {
     Navigator.push(
       context,
@@ -265,7 +393,6 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
 
-
     return Scaffold(
       appBar: AppBar(
         title: Text(loc.campusDirectory),
@@ -274,19 +401,23 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
           labelColor: AppTheme.primary,
           unselectedLabelColor: AppTheme.getTextHint(context),
           indicatorColor: AppTheme.primary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
           tabs: [
             Tab(
-              icon: const Icon(Icons.photo_library_rounded, size: 20),
+              icon: const Icon(Icons.photo_library_rounded, size: 19),
               text: loc.isArabic ? 'الخرائط الرسمية' : 'Official Maps',
             ),
             Tab(
-              icon: const Icon(Icons.search_rounded, size: 20),
+              icon: const Icon(Icons.search_rounded, size: 19),
               text: loc.isArabic ? 'دليل الأماكن' : 'Directory',
             ),
             Tab(
-              icon: const Icon(Icons.lightbulb_outline_rounded, size: 20),
+              icon: const Icon(Icons.lightbulb_outline_rounded, size: 19),
               text: loc.isArabic ? 'شرح الأكواد' : 'Code Key',
+            ),
+            Tab(
+              icon: const Icon(Icons.add_a_photo_rounded, size: 19),
+              text: loc.isArabic ? 'صوري المضافة' : 'My Photos',
             ),
           ],
         ),
@@ -302,6 +433,9 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
 
           // Tab 3: Code Decoding Key
           _buildCodeKeyTab(context),
+
+          // Tab 4: User Personal Photos
+          _buildUserPhotosTab(context),
         ],
       ),
     );
@@ -818,6 +952,312 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
     );
   }
 
+  // ── Tab 4: User Personal Campus Photos ──
+  Widget _buildUserPhotosTab(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final isArabic = loc.isArabic;
+    final isDark = AppTheme.isDark(context);
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Action Card to Add Photo
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.primary.withValues(alpha: isDark ? 0.25 : 0.12),
+                (isDark ? AppTheme.accent : AppTheme.primary).withValues(alpha: isDark ? 0.12 : 0.06),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: AppTheme.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.add_a_photo_rounded, color: AppTheme.primary, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isArabic ? 'أضف صورك الخاصة للحرم الجامعي' : 'Add Your Own Campus Photos',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.getTextPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          isArabic
+                              ? 'صوّر المدرجات، المعامل، جداول الإعلانات، أو الممرات لتبقى محفوظة في هاتفك 📸'
+                              : 'Keep photos of lecture halls, labs, or notices saved right here.',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.getTextSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _pickAndAddPhoto(ImageSource.gallery),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      icon: const Icon(Icons.photo_library_rounded, size: 17),
+                      label: Text(
+                        isArabic ? 'من المعرض' : 'From Gallery',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _pickAndAddPhoto(ImageSource.camera),
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      icon: const Icon(Icons.camera_alt_rounded, size: 17),
+                      label: Text(
+                        isArabic ? 'التقاط بالكاميرا' : 'Take Photo',
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        if (_userPhotos.isEmpty)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+              child: Column(
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.05),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Center(
+                      child: Text('📷', style: TextStyle(fontSize: 34)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    isArabic ? 'لا توجد صور شخصية مضافة بعد' : 'No photos added yet',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.getTextPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    isArabic
+                        ? 'اضغط على أحد الأزرار بالأعلى لإضافة صور من جهازك أو التقاط صورة جديدة.'
+                        : 'Tap a button above to add photos from your device or take a new one.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.getTextSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isArabic ? 'الصور المحفوظة (${_userPhotos.length})' : 'Saved Photos (${_userPhotos.length})',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.getTextPrimary(context),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ..._userPhotos.asMap().entries.map((entry) {
+            final index = entry.key;
+            final photo = entry.value;
+            final path = photo['path'] as String? ?? '';
+            final title = photo['title'] as String? ?? (isArabic ? 'صورة' : 'Photo');
+            final file = File(path);
+            final exists = file.existsSync();
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.bgCard : Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (exists)
+                      GestureDetector(
+                        onTap: () => _openImageViewer(path, title),
+                        child: Stack(
+                          children: [
+                            Image.file(
+                              file,
+                              height: 190,
+                              width: double.infinity,
+                              fit: BoxFit.cover,
+                            ),
+                            Positioned(
+                              bottom: 10,
+                              left: 10,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.75),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.zoom_in_rounded, size: 14, color: Colors.white),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      isArabic ? 'عرض كامل' : 'View Full',
+                                      style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
+                      Container(
+                        height: 120,
+                        color: isDark ? Colors.white10 : Colors.black12,
+                        child: Center(
+                          child: Text(
+                            isArabic ? 'الملف غير موجود على الجهاز' : 'File not found on device',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              title,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.getTextPrimary(context),
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.error, size: 20),
+                            tooltip: isArabic ? 'حذف الصورة' : 'Delete photo',
+                            onPressed: () async {
+                              final del = await showDialog<bool>(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  title: Text(isArabic ? 'حذف الصورة' : 'Delete Photo'),
+                                  content: Text(isArabic ? 'هل تريد حذف هذه الصورة؟' : 'Delete this photo?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, false),
+                                      child: Text(isArabic ? 'إلغاء' : 'Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(ctx, true),
+                                      child: Text(
+                                        isArabic ? 'حذف' : 'Delete',
+                                        style: const TextStyle(color: AppTheme.error, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (del == true) {
+                                await _deleteUserPhoto(index);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
+
+        const SizedBox(height: 30),
+      ],
+    );
+  }
+
   Widget _buildBulletPoint(String text) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -844,6 +1284,8 @@ class _FullScreenImageViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isAsset = imagePath.startsWith('assets/');
+
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -868,10 +1310,15 @@ class _FullScreenImageViewer extends StatelessWidget {
             boundaryMargin: const EdgeInsets.all(20),
             minScale: 0.8,
             maxScale: 5.0,
-            child: Image.asset(
-              imagePath,
-              fit: BoxFit.contain,
-            ),
+            child: isAsset
+                ? Image.asset(
+                    imagePath,
+                    fit: BoxFit.contain,
+                  )
+                : Image.file(
+                    File(imagePath),
+                    fit: BoxFit.contain,
+                  ),
           ),
         ),
       ),

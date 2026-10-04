@@ -5,6 +5,7 @@ library;
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_constants.dart';
+import '../../core/services/notification_service.dart';
 import '../../domain/entities/schedule_entry.dart';
 import '../../domain/repositories/schedule_repository.dart';
 
@@ -122,6 +123,12 @@ class ScheduleCubit extends Cubit<ScheduleState> {
         selectedWeekDayIndex: initialWeekIdx,
         clearNextClass: nextClass == null,
       ));
+
+      // Automatically schedule all weekly lecture notifications for the student
+      try {
+        final allEntries = weekEntries.values.expand((list) => list).toList();
+        NotificationService.instance.scheduleAllNotifications(allEntries).ignore();
+      } catch (_) {}
     } catch (e) {
       emit(state.copyWith(
         isLoading: false,

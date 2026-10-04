@@ -33,7 +33,7 @@ class PreferencesState extends Equatable {
     this.notificationsEnabled = true,
     this.attendance = const {},
     this.absences = const {},
-    this.themeMode = ThemeMode.dark,
+    this.themeMode = ThemeMode.light,
     this.primaryColorValue = 0xFF6C63FF,
     this.customSessionColors = const {},
   });
@@ -105,7 +105,8 @@ class PreferencesCubit extends Cubit<PreferencesState> {
     final notifs =
         _prefs.getBool(AppConstants.prefNotificationsEnabled) ?? true;
     final themeStr = _prefs.getString(AppConstants.prefThemeMode);
-    final themeMode = themeStr == 'light' ? ThemeMode.light : ThemeMode.dark;
+    // On first launch / onboarding or by default, always strictly start in Light Mode
+    final themeMode = (!onboarded || themeStr != 'dark') ? ThemeMode.light : ThemeMode.dark;
     final primaryColor =
         _prefs.getInt(AppConstants.prefPrimaryColor) ?? 0xFF6C63FF;
 

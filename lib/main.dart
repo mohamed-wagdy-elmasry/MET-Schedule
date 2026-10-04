@@ -18,7 +18,7 @@ import 'data/repositories/schedule_repository_impl.dart';
 import 'presentation/bloc/preferences_cubit.dart';
 import 'presentation/bloc/schedule_cubit.dart';
 import 'presentation/screens/home_screen.dart';
-import 'presentation/screens/onboarding_screen.dart';
+import 'presentation/screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -89,9 +89,7 @@ class METApp extends StatelessWidget {
               ],
 
               // ── Routing ──
-              home: prefsState.hasOnboarded
-                  ? const _ScheduleLoader()
-                  : const OnboardingScreen(),
+              home: const SplashScreen(),
             ),
           );
         },
@@ -104,14 +102,14 @@ class METApp extends StatelessWidget {
 ///
 /// Separated from HomeScreen so the BlocBuilder doesn't trigger a
 /// re-load every time the preferences emit.
-class _ScheduleLoader extends StatefulWidget {
-  const _ScheduleLoader();
+class ScheduleLoader extends StatefulWidget {
+  const ScheduleLoader({super.key});
 
   @override
-  State<_ScheduleLoader> createState() => _ScheduleLoaderState();
+  State<ScheduleLoader> createState() => _ScheduleLoaderState();
 }
 
-class _ScheduleLoaderState extends State<_ScheduleLoader> {
+class _ScheduleLoaderState extends State<ScheduleLoader> {
   bool _loaded = false;
 
   @override

@@ -12,24 +12,24 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ThemeMode & Light/Dark Theme Tests', () {
-    test('PreferencesCubit defaults to dark and toggles to light mode', () async {
+    test('PreferencesCubit defaults to light and toggles to dark mode', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
       final cubit = PreferencesCubit(prefs);
 
-      expect(cubit.state.themeMode, ThemeMode.dark);
-      expect(cubit.state.isDarkMode, isTrue);
-
-      await cubit.toggleThemeMode();
       expect(cubit.state.themeMode, ThemeMode.light);
       expect(cubit.state.isDarkMode, isFalse);
 
-      // Verify persistence
-      expect(prefs.getString('app_theme_mode'), 'light');
-
       await cubit.toggleThemeMode();
       expect(cubit.state.themeMode, ThemeMode.dark);
+      expect(cubit.state.isDarkMode, isTrue);
+
+      // Verify persistence
       expect(prefs.getString('app_theme_mode'), 'dark');
+
+      await cubit.toggleThemeMode();
+      expect(cubit.state.themeMode, ThemeMode.light);
+      expect(prefs.getString('app_theme_mode'), 'light');
     });
 
     test('AppTheme lightTheme and darkTheme have proper brightness and colors', () {

@@ -3,6 +3,7 @@
 /// and smart time indicators. Fully adapts to both Dark and Light modes.
 library;
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_constants.dart';
@@ -425,7 +426,7 @@ class ScheduleCard extends StatelessWidget {
 }
 
 /// Hero card for the upcoming/current class on the Today view.
-class NextClassCard extends StatelessWidget {
+class NextClassCard extends StatefulWidget {
   final ScheduleEntry entry;
   final String currentDay;
   final String? targetDay;
@@ -438,19 +439,38 @@ class NextClassCard extends StatelessWidget {
   });
 
   @override
+  State<NextClassCard> createState() => _NextClassCardState();
+}
+
+class _NextClassCardState extends State<NextClassCard> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    // Live update every 10 seconds so clock & countdown update in real-time
+    _ticker = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final entry = widget.entry;
+    final currentDay = widget.currentDay;
+    final targetDay = widget.targetDay;
     final loc = AppLocalizations.of(context);
     final isArabic = loc.isArabic;
     final isDark = AppTheme.isDark(context);
 
-    PreferencesState? prefs;
-    try {
-      prefs = context.watch<PreferencesCubit>().state;
-    } catch (_) {
-      prefs = null;
-    }
-    final customColor = prefs?.getCustomSessionColor(entry.type);
-    final color = customColor ?? AppTheme.sessionColor(entry.type, isDark, prefs?.customSessionColors);
+
+
 
     // Calculate time until class
     final now = DateTime.now();
@@ -464,7 +484,7 @@ class NextClassCard extends StatelessWidget {
       diffMinutes = classTime.difference(now).inMinutes;
     } else {
       final curIdx = _dayIndex(currentDay);
-      final tgtIdx = _dayIndex(targetDay!);
+      final tgtIdx = _dayIndex(targetDay);
       int dayDiff = (tgtIdx - curIdx) % 7;
       if (dayDiff <= 0) dayDiff += 7;
 
@@ -484,69 +504,126 @@ class NextClassCard extends StatelessWidget {
       timeLabel = isArabic ? '$hours س $mins د' : '${hours}h ${mins}m';
     }
 
-    final dayPrefix = !isSameDay && targetDay != null
-        ? '${_dayName(targetDay!, isArabic)}: '
+    final dayPrefix = !isSameDay
+        ? '${_dayName(targetDay, isArabic)}: '
         : '';
 
+    // Dynamic title: lecture vs section
+    final isLecture = entry.isLecture;
+    final String statusLabel;
+    if (diffMinutes <= 0) {
+      statusLabel = isArabic
+          ? (isLecture ? 'المحاضرة جارية الآن' : 'السكشن جارٍ الآن')
+          : (isLecture ? 'Lecture In Progress' : 'Section In Progress');
+    } else {
+      statusLabel = isArabic
+          ? (isLecture ? 'المحاضرة القادمة' : 'السكشن القادم')
+          : (isLecture ? 'Next Lecture' : 'Next Section');
+    }
+
+    // Standout distinctive hero color — Vibrant Solar Amber & Sun Gold (unique across the entire app)
+    const heroAmber = Color(0xFFF59E0B);
+    const heroAmberDark = Color(0xFFD97706);
+    const heroOrange = Color(0xFFEA580C);
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: isDark
-              ? [
-                  color.withValues(alpha: 0.25),
-                  AppTheme.bgCard.withValues(alpha: 0.9),
+              ? const [
+                  Color(0xFF261908),
+                  Color(0xFF1E293B),
                 ]
-              : [
-                  color.withValues(alpha: 0.16),
+              : const [
+                  Color(0xFFFFFBEB),
                   Colors.white,
                 ],
         ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: color.withValues(alpha: isDark ? 0.3 : 0.4),
-          width: 1.5,
+          color: heroAmber.withValues(alpha: isDark ? 0.75 : 0.65),
+          width: 2.2,
         ),
         boxShadow: [
+          // Glowing Ambient Shadow
           BoxShadow(
-            color: isDark
-                ? color.withValues(alpha: 0.2)
-                : const Color(0xFF64748B).withValues(alpha: 0.1),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: (isDark ? heroAmber : heroOrange).withValues(alpha: isDark ? 0.35 : 0.20),
+            blurRadius: 28,
+            spreadRadius: 1,
+            offset: const Offset(0, 10),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Distinctive Header Tag distinguishing it clearly from normal schedule cards
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [heroAmber, heroAmberDark],
+              ),
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: heroAmber.withValues(alpha: 0.35),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.bolt_rounded, size: 15, color: Colors.white),
+                const SizedBox(width: 5),
+                Text(
+                  isArabic ? '⚡ موعدك القادم في الجدول الدراسي' : '⚡ Next On Your Academic Timetable',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.3,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Row(
             children: [
               // Live status indicator badge
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: isDark ? 0.22 : 0.14),
+                  color: heroAmber.withValues(alpha: isDark ? 0.25 : 0.14),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: color.withValues(alpha: isDark ? 0.45 : 0.35),
+                    color: heroAmber.withValues(alpha: isDark ? 0.6 : 0.4),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 7,
-                      height: 7,
+                      width: 8,
+                      height: 8,
                       decoration: BoxDecoration(
-                        color: diffMinutes <= 0 ? const Color(0xFF00E5A0) : color,
+                        color: diffMinutes <= 0 ? const Color(0xFF00E5A0) : heroAmber,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: (diffMinutes <= 0 ? const Color(0xFF00E5A0) : color).withValues(alpha: 0.8),
+                            color: (diffMinutes <= 0 ? const Color(0xFF00E5A0) : heroAmber).withValues(alpha: 0.8),
                             blurRadius: 6,
                           ),
                         ],
@@ -554,13 +631,11 @@ class NextClassCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      diffMinutes <= 0
-                          ? (isArabic ? 'المحاضرة جارية الآن' : 'Class In Progress')
-                          : (isArabic ? 'المحاضرة القادمة' : loc.nextClass),
+                      statusLabel,
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color: color,
+                        color: isDark ? heroAmber : heroAmberDark,
                       ),
                     ),
                   ],
@@ -574,20 +649,18 @@ class NextClassCard extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: diffMinutes <= 10 && isSameDay
                         ? [
-                            AppTheme.error.withValues(alpha: isDark ? 0.25 : 0.18),
-                            AppTheme.error.withValues(alpha: isDark ? 0.12 : 0.08),
+                            AppTheme.error.withValues(alpha: isDark ? 0.28 : 0.18),
+                            AppTheme.error.withValues(alpha: isDark ? 0.14 : 0.08),
                           ]
                         : [
-                            AppTheme.primary.withValues(alpha: isDark ? 0.25 : 0.15),
-                            (isDark ? AppTheme.accent : AppTheme.primary).withValues(alpha: isDark ? 0.15 : 0.10),
+                            heroAmber.withValues(alpha: isDark ? 0.25 : 0.14),
+                            heroOrange.withValues(alpha: isDark ? 0.14 : 0.08),
                           ],
                   ),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: (diffMinutes <= 10 && isSameDay
-                            ? AppTheme.error
-                            : (isDark ? AppTheme.accent : AppTheme.primary))
-                        .withValues(alpha: 0.4),
+                    color: (diffMinutes <= 10 && isSameDay ? AppTheme.error : heroAmber)
+                        .withValues(alpha: isDark ? 0.6 : 0.4),
                   ),
                 ),
                 child: Row(
@@ -598,7 +671,7 @@ class NextClassCard extends StatelessWidget {
                       size: 14,
                       color: diffMinutes <= 10 && isSameDay
                           ? AppTheme.error
-                          : (isDark ? AppTheme.accent : AppTheme.primary),
+                          : (isDark ? heroAmber : heroAmberDark),
                     ),
                     const SizedBox(width: 5),
                     Text(
@@ -607,10 +680,10 @@ class NextClassCard extends StatelessWidget {
                           : '$dayPrefix${loc.startsIn} $timeLabel',
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         color: diffMinutes <= 10 && isSameDay
                             ? AppTheme.error
-                            : (isDark ? AppTheme.accent : AppTheme.primary),
+                            : (isDark ? heroAmber : heroAmberDark),
                       ),
                     ),
                   ],
@@ -622,19 +695,19 @@ class NextClassCard extends StatelessWidget {
                 behavior: HitTestBehavior.opaque,
                 onTap: () => EditSessionModal.show(context, entry: entry),
                 child: Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(7),
                   decoration: BoxDecoration(
-                    color: color.withValues(alpha: isDark ? 0.16 : 0.09),
+                    color: heroAmber.withValues(alpha: isDark ? 0.20 : 0.10),
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: color.withValues(alpha: isDark ? 0.35 : 0.25),
+                      color: heroAmber.withValues(alpha: isDark ? 0.4 : 0.3),
                       width: 1,
                     ),
                   ),
                   child: Icon(
                     Icons.edit_rounded,
                     size: 14,
-                    color: color,
+                    color: isDark ? heroAmber : heroAmberDark,
                   ),
                 ),
               ),
@@ -669,7 +742,7 @@ class NextClassCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.access_time_rounded, size: 14, color: color),
+                    Icon(Icons.access_time_rounded, size: 14, color: isDark ? heroAmber : heroAmberDark),
                     const SizedBox(width: 5),
                     Text(
                       entry.timeRange(isArabic),
@@ -686,9 +759,9 @@ class NextClassCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: isDark ? 0.15 : 0.10),
+                  color: heroAmber.withValues(alpha: isDark ? 0.16 : 0.10),
                   borderRadius: BorderRadius.circular(9),
-                  border: Border.all(color: color.withValues(alpha: 0.25)),
+                  border: Border.all(color: heroAmber.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -700,7 +773,7 @@ class NextClassCard extends StatelessWidget {
                               ? Icons.domain_rounded
                               : Icons.meeting_room_rounded),
                       size: 14,
-                      color: color,
+                      color: isDark ? heroAmber : heroAmberDark,
                     ),
                     const SizedBox(width: 5),
                     Text(
@@ -708,7 +781,7 @@ class NextClassCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? color : const Color(0xFF1E293B),
+                        color: isDark ? heroAmber : const Color(0xFF1E293B),
                       ),
                     ),
                   ],

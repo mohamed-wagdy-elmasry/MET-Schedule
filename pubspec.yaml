@@ -2,7 +2,7 @@ name: met1
 description: "MET - Smart Timetable & Student Hub"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ^3.12.2
@@ -30,6 +30,7 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.8
   url_launcher: ^6.3.2
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:

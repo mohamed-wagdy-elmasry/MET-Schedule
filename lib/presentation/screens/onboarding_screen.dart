@@ -9,6 +9,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../main.dart' show ScheduleLoader;
 import '../bloc/preferences_cubit.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -54,21 +55,29 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   Widget build(BuildContext context) {
     final loc = AppLocalizations.of(context);
     final size = MediaQuery.of(context).size;
+    final isDark = AppTheme.isDark(context);
 
     return Scaffold(
+      backgroundColor: isDark ? AppTheme.bgDark : AppTheme.bgLight,
       body: Stack(
         children: [
           // ── Animated gradient background ──
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0D0D2B),
-                  Color(0xFF1A0A3E),
-                  Color(0xFF0D0D1A),
-                ],
+                colors: isDark
+                    ? const [
+                        Color(0xFF0F172A),
+                        Color(0xFF1E293B),
+                        Color(0xFF0F172A),
+                      ]
+                    : const [
+                        Color(0xFFF8FAFC),
+                        Color(0xFFEFF6FF),
+                        Color(0xFFF1F5F9),
+                      ],
               ),
             ),
           ),
@@ -84,7 +93,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppTheme.primary.withValues(alpha: 0.15),
+                    AppTheme.primary.withValues(alpha: isDark ? 0.15 : 0.07),
                     Colors.transparent,
                   ],
                 ),
@@ -101,7 +110,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    AppTheme.accent.withValues(alpha: 0.1),
+                    AppTheme.accent.withValues(alpha: isDark ? 0.1 : 0.05),
                     Colors.transparent,
                   ],
                 ),
@@ -190,13 +199,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   Widget _buildDot(int index) {
     final isActive = index == _currentPage;
+    final isDark = AppTheme.isDark(context);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       margin: const EdgeInsets.symmetric(horizontal: 4),
       height: 8,
       width: isActive ? 28 : 8,
       decoration: BoxDecoration(
-        color: isActive ? AppTheme.primary : AppTheme.textHint.withValues(alpha: 0.3),
+        color: isActive
+            ? AppTheme.primary
+            : (isDark ? AppTheme.textHint.withValues(alpha: 0.3) : const Color(0xFFCBD5E1)),
         borderRadius: BorderRadius.circular(4),
       ),
     );
@@ -204,6 +216,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // ── Page 0: Welcome ──
   Widget _buildWelcomePage(AppLocalizations loc) {
+    final isDark = AppTheme.isDark(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -217,7 +230,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               borderRadius: BorderRadius.circular(32),
               boxShadow: [
                 BoxShadow(
-                  color: AppTheme.primary.withValues(alpha: 0.5),
+                  color: AppTheme.primary.withValues(alpha: isDark ? 0.45 : 0.25),
                   blurRadius: 36,
                   offset: const Offset(0, 12),
                 ),
@@ -235,10 +248,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           Text(
             loc.welcomeTitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.getTextPrimary(context),
               height: 1.3,
             ),
           ),
@@ -246,26 +259,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           Text(
             loc.welcomeSubtitle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: AppTheme.textSecondary,
+              color: AppTheme.getTextSecondary(context),
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.primary.withValues(alpha: 0.1),
+              color: AppTheme.primary.withValues(alpha: isDark ? 0.12 : 0.08),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3)),
+              border: Border.all(color: AppTheme.primary.withValues(alpha: isDark ? 0.3 : 0.25)),
             ),
             child: Text(
               loc.semester,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                color: AppTheme.accent,
-                fontWeight: FontWeight.w500,
+                color: isDark ? AppTheme.accent : AppTheme.primary,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -276,6 +289,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // ── Page 1: Group Selection ──
   Widget _buildGroupPage(AppLocalizations loc) {
+    final isDark = AppTheme.isDark(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 32),
       child: Column(
@@ -285,10 +299,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           const SizedBox(height: 24),
           Text(
             loc.selectGroup,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textPrimary,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.getTextPrimary(context),
             ),
           ),
           const SizedBox(height: 32),
@@ -309,29 +323,36 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                     padding: const EdgeInsets.symmetric(vertical: 32),
                     decoration: BoxDecoration(
                       gradient: isSelected
-                          ? LinearGradient(
+                          ? const LinearGradient(
                               colors: [AppTheme.primary, AppTheme.primaryDark],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             )
                           : null,
-                      color: isSelected ? null : AppTheme.bgCard,
+                      color: isSelected ? null : (isDark ? AppTheme.bgCard : Colors.white),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected
                             ? AppTheme.primary
-                            : Colors.white.withValues(alpha: 0.08),
+                            : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
                         width: isSelected ? 2 : 1,
                       ),
                       boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: AppTheme.primary.withValues(alpha: 0.3),
+                                color: AppTheme.primary.withValues(alpha: 0.35),
                                 blurRadius: 20,
                                 offset: const Offset(0, 8),
                               ),
                             ]
-                          : [],
+                          : [
+                              if (!isDark)
+                                BoxShadow(
+                                  color: const Color(0xFF64748B).withValues(alpha: 0.08),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                            ],
                     ),
                     child: Column(
                       children: [
@@ -340,7 +361,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           style: TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : AppTheme.textSecondary,
+                            color: isSelected ? Colors.white : AppTheme.getTextPrimary(context),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -350,7 +371,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                             fontSize: 14,
                             color: isSelected
                                 ? Colors.white.withValues(alpha: 0.7)
-                                : AppTheme.textHint,
+                                : AppTheme.getTextSecondary(context),
                           ),
                         ),
                       ],
@@ -367,6 +388,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // ── Page 2: Section Selection ──
   Widget _buildSectionPage(AppLocalizations loc) {
+    final isDark = AppTheme.isDark(context);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Center(
@@ -379,18 +401,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               const SizedBox(height: 24),
               Text(
                 loc.selectSection,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.getTextPrimary(context),
                 ),
               ),
               const SizedBox(height: 8),
               Text(
                 '${loc.groupLabel} $_selectedGroup',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: AppTheme.textSecondary,
+                  color: AppTheme.getTextSecondary(context),
                 ),
               ),
               const SizedBox(height: 24),
@@ -412,10 +434,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                 colors: [AppTheme.accent, AppTheme.accentAlt],
                               )
                             : null,
-                        color: isSelected ? null : AppTheme.bgCard,
+                        color: isSelected ? null : (isDark ? AppTheme.bgCard : Colors.white),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                          color: isSelected ? AppTheme.accent : Colors.white.withValues(alpha: 0.06),
+                          color: isSelected ? AppTheme.accent : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0)),
                           width: isSelected ? 2 : 1,
                         ),
                         boxShadow: isSelected
@@ -426,7 +448,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                                   offset: const Offset(0, 4),
                                 ),
                               ]
-                            : [],
+                            : [
+                                if (!isDark)
+                                  BoxShadow(
+                                    color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
                       ),
                       child: Center(
                         child: Text(
@@ -434,7 +463,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? Colors.white : AppTheme.textSecondary,
+                            color: isSelected ? Colors.white : AppTheme.getTextPrimary(context),
                           ),
                         ),
                       ),
@@ -449,7 +478,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     );
   }
 
-  void _onNext() {
+  void _onNext() async {
     if (_currentPage < 2) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
@@ -458,9 +487,20 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else {
       // Save and navigate
       final prefsCubit = context.read<PreferencesCubit>();
-      prefsCubit.setGroupAndSection(_selectedGroup, _selectedSection);
-      prefsCubit.completeOnboarding();
+      await prefsCubit.setGroupAndSection(_selectedGroup, _selectedSection);
+      await prefsCubit.completeOnboarding();
       NotificationService.instance.showSeniorWelcomeNotification().ignore();
+
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (_, animation, secondaryAnimation) => FadeTransition(
+            opacity: animation,
+            child: const ScheduleLoader(),
+          ),
+        ),
+      );
     }
   }
 }
@@ -472,14 +512,24 @@ class _LanguageChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = AppTheme.isDark(context);
     return GestureDetector(
       onTap: () => context.read<PreferencesCubit>().toggleLocale(),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: AppTheme.bgCard.withValues(alpha: 0.6),
+          color: isDark ? AppTheme.bgCard.withValues(alpha: 0.6) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFCBD5E1)),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -488,10 +538,10 @@ class _LanguageChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               loc.isArabic ? 'EN' : 'عربي',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.textPrimary,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.getTextPrimary(context),
               ),
             ),
           ],

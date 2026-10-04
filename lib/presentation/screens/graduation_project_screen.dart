@@ -1968,36 +1968,60 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                   ),
                   child: TabBar(
                     controller: _tabController,
-                    isScrollable: true,
-                    tabAlignment: TabAlignment.start,
+                    isScrollable: false,
+                    dividerColor: Colors.transparent,
+                    dividerHeight: 0,
                     labelColor: AppTheme.primary,
                     unselectedLabelColor: AppTheme.getTextHint(context),
-                    indicatorColor: AppTheme.primary,
-                    indicatorSize: TabBarIndicatorSize.label,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    indicator: BoxDecoration(
+                      color: isDark
+                          ? AppTheme.primary.withValues(alpha: 0.20)
+                          : AppTheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                        width: 1,
+                      ),
+                    ),
                     labelStyle: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.bold),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                     tabs: [
                       Tab(
-                        icon: const Icon(Icons.link_rounded, size: 18),
+                        height: 50,
+                        icon: const Icon(Icons.link_rounded, size: 20),
+                        iconMargin: const EdgeInsets.only(bottom: 2),
                         text: loc.isArabic ? 'الروابط' : 'Links',
                       ),
                       Tab(
-                        icon: const Icon(Icons.group_rounded, size: 18),
+                        height: 50,
+                        icon: const Icon(Icons.group_rounded, size: 20),
+                        iconMargin: const EdgeInsets.only(bottom: 2),
                         text: loc.isArabic ? 'الفريق' : 'Team',
                       ),
                       Tab(
-                        icon: const Icon(Icons.checklist_rounded, size: 18),
+                        height: 50,
+                        icon: const Icon(Icons.checklist_rounded, size: 20),
+                        iconMargin: const EdgeInsets.only(bottom: 2),
                         text: loc.isArabic ? 'المهام' : 'Tasks',
                       ),
                       Tab(
-                        icon: const Icon(Icons.flag_rounded, size: 18),
+                        height: 50,
+                        icon: const Icon(Icons.flag_rounded, size: 20),
+                        iconMargin: const EdgeInsets.only(bottom: 2),
                         text: loc.isArabic ? 'المراحل' : 'Timeline',
                       ),
                     ],
                   ),
                 ),
               ),
-              height: 56,
+              height: 60,
             ),
           ),
         ];

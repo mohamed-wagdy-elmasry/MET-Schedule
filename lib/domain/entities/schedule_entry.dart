@@ -174,6 +174,12 @@ class ScheduleEntry extends Equatable {
     return (eh * 60 + em) - (sh * 60 + sm);
   }
 
+  /// Whether this entry is a lecture
+  bool get isLecture => type == 'lecture';
+
+  /// Whether this entry is a practical section/lab
+  bool get isSection => type == 'section' || type == 'lab';
+
   /// Whether this entry is relevant for a given section number.
   bool isRelevantForSection(int section) {
     if (type == 'lecture' || type == 'rest' || type == 'project' || isForAllSections) return true;

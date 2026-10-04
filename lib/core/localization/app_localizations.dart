@@ -63,7 +63,7 @@ class AppLocalizations {
 
   // ── Timetable ──
   String get todaySchedule => _t("Today's Schedule", 'جدول اليوم');
-  String get weeklySchedule => _t('Full Week', 'الأسبوع الكامل');
+  String get weeklySchedule => _t('Weekly Schedule', 'جدول الأسبوع');
   String get noClassesToday =>
       _t('No classes today! 🎉', 'لا يوجد محاضرات اليوم! 🎉');
   String get nextClass => _t('Next Class', 'المحاضرة القادمة');
