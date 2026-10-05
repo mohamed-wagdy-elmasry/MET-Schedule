@@ -489,7 +489,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       final prefsCubit = context.read<PreferencesCubit>();
       await prefsCubit.setGroupAndSection(_selectedGroup, _selectedSection);
       await prefsCubit.completeOnboarding();
-      NotificationService.instance.showSeniorWelcomeNotification().ignore();
+      NotificationService.instance.checkAndShowSeniorWelcomeOnFirstLaunch().ignore();
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

@@ -143,31 +143,34 @@ class _ToolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(20),
-        decoration: AppTheme.glassDecorationWithColor(color, context),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(16),
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(20),
+          decoration: AppTheme.glassDecorationWithColor(color, context),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(icon, color: color, size: 28),
               ),
-              child: Icon(icon, color: color, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 4,
+                      children: [
+                        Text(
                           title,
                           style: TextStyle(
                             fontSize: 16,
@@ -175,41 +178,39 @@ class _ToolCard extends StatelessWidget {
                             color: AppTheme.getTextPrimary(context),
                           ),
                         ),
-                      ),
-                      if (badge != null) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.18),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
+                        if (badge != null)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: 0.18),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
+                            ),
+                            child: Text(
+                              badge!,
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+                            ),
                           ),
-                          child: Text(
-                            badge!,
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
-                          ),
-                        ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppTheme.getTextSecondary(context),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.getTextSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: color.withValues(alpha: 0.5),
-              size: 24,
-            ),
-          ],
+              Icon(
+                Icons.chevron_right_rounded,
+                color: color.withValues(alpha: 0.5),
+                size: 24,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -517,6 +518,7 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
     required BuildContext context,
   }) {
     final isDark = AppTheme.isDark(context);
+    final loc = AppLocalizations.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -561,14 +563,14 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
                         color: Colors.black.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.zoom_in_rounded, color: Colors.white, size: 16),
-                          SizedBox(width: 4),
+                          const Icon(Icons.zoom_in_rounded, color: Colors.white, size: 16),
+                          const SizedBox(width: 4),
                           Text(
-                            'تكبير وعرض كامل',
-                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                            loc.isArabic ? 'تكبير وعرض كامل' : 'Zoom & Fullscreen',
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
@@ -811,6 +813,8 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
   // ── Tab 3: Code Decoding Key ──
   Widget _buildCodeKeyTab(BuildContext context) {
     final isDark = AppTheme.isDark(context);
+    final loc = AppLocalizations.of(context);
+    final isArabic = loc.isArabic;
 
     return ListView(
       padding: const EdgeInsets.all(16),
@@ -818,13 +822,15 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
         // Rule 1: Section Rooms (R.C503)
         _buildDecoderCard(
           icon: Icons.door_sliding_rounded,
-          title: 'قاعات السكاشن (مثال: R.C503)',
+          title: isArabic
+              ? 'قاعات السكاشن (مثال: R.C503)'
+              : 'Section Rooms (e.g. R.C503)',
           color: const Color(0xFF6C5CE7),
           breakdown: [
-            {'part': 'R', 'meaning': 'قاعة سكاشن (Room)'},
-            {'part': 'C', 'meaning': 'مبنى C'},
-            {'part': '5', 'meaning': 'الدور الخامس علوي'},
-            {'part': '03', 'meaning': 'رقم القاعة'},
+            {'part': 'R', 'meaning': isArabic ? 'قاعة سكاشن (Room)' : 'Section Room (Room)'},
+            {'part': 'C', 'meaning': isArabic ? 'مبنى C' : 'Building C'},
+            {'part': '5', 'meaning': isArabic ? 'الدور الخامس علوي' : '5th Floor'},
+            {'part': '03', 'meaning': isArabic ? 'رقم القاعة' : 'Room Number'},
           ],
           context: context,
         ),
@@ -834,13 +840,15 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
         // Rule 2: Practical Labs (L.D202)
         _buildDecoderCard(
           icon: Icons.computer_rounded,
-          title: 'معامل السكاشن العملي (مثال: L.D202)',
+          title: isArabic
+              ? 'معامل السكاشن العملي (مثال: L.D202)'
+              : 'Practical Labs (e.g. L.D202)',
           color: const Color(0xFF00B894),
           breakdown: [
-            {'part': 'L', 'meaning': 'معمل عملي (Lab)'},
-            {'part': 'D', 'meaning': 'مبنى D'},
-            {'part': '2', 'meaning': 'الدور الثاني علوي'},
-            {'part': '02', 'meaning': 'رقم المعمل'},
+            {'part': 'L', 'meaning': isArabic ? 'معمل عملي (Lab)' : 'Practical Lab (Lab)'},
+            {'part': 'D', 'meaning': isArabic ? 'مبنى D' : 'Building D'},
+            {'part': '2', 'meaning': isArabic ? 'الدور الثاني علوي' : '2nd Floor'},
+            {'part': '02', 'meaning': isArabic ? 'رقم المعمل' : 'Lab Number'},
           ],
           context: context,
         ),
@@ -860,24 +868,40 @@ class _CampusDirectoryPageState extends State<_CampusDirectoryPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(Icons.theater_comedy_rounded, color: Color(0xFFE17055), size: 24),
-                  SizedBox(width: 10),
+                  const Icon(Icons.theater_comedy_rounded, color: Color(0xFFE17055), size: 24),
+                  const SizedBox(width: 10),
                   Text(
-                    'توزيع مدرجات المحاضرات الكبرى',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    isArabic
+                        ? 'توزيع مدرجات المحاضرات الكبرى'
+                        : 'Main Lecture Halls Distribution',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
-              _buildBulletPoint('🏛️ مدرج A: مبنى C — الدور الثاني علوي'),
-              _buildBulletPoint('🏛️ مدرج B: مبنى C — الدور الثالث علوي'),
-              _buildBulletPoint('🏛️ مدرج C: مبنى C — الدور الرابع علوي'),
-              _buildBulletPoint('🏛️ مدرج D & E: مبنى D — الدور الثالث علوي'),
-              _buildBulletPoint('🏛️ مدرج F & G: مبنى D — الدور الرابع علوي'),
-              _buildBulletPoint('🏛️ مدرج 301 هـ & 402 هـ: مبنى E (الملحق الجديد)'),
-              _buildBulletPoint('🏛️ مدرج LG006: مبنى E — الدور الأرضي المنخفض'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج A: مبنى C — الدور الثاني علوي'
+                  : '🏛️ Hall A: Building C — 2nd Floor'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج B: مبنى C — الدور الثالث علوي'
+                  : '🏛️ Hall B: Building C — 3rd Floor'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج C: مبنى C — الدور الرابع علوي'
+                  : '🏛️ Hall C: Building C — 4th Floor'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج D & E: مبنى D — الدور الثالث علوي'
+                  : '🏛️ Halls D & E: Building D — 3rd Floor'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج F & G: مبنى D — الدور الرابع علوي'
+                  : '🏛️ Halls F & G: Building D — 4th Floor'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج 301 هـ & 402 هـ: مبنى E (الملحق الجديد)'
+                  : '🏛️ Halls 301 E & 402 E: Building E (New Annex)'),
+              _buildBulletPoint(isArabic
+                  ? '🏛️ مدرج LG006: مبنى E — الدور الأرضي المنخفض'
+                  : '🏛️ Hall LG006: Building E — Lower Ground Floor'),
             ],
           ),
         ),
@@ -1595,7 +1619,9 @@ class _AttendanceTrackerPageState extends State<_AttendanceTrackerPage>
                                     style: TextStyle(fontSize: 10, color: Colors.white.withValues(alpha: 0.8)),
                                   ),
                                   Text(
-                                    '$totalAbsences غياب',
+                                    isArabic
+                                        ? '$totalAbsences غياب'
+                                        : '$totalAbsences ${totalAbsences == 1 ? "Absence" : "Absences"}',
                                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                                   ),
                                 ],
@@ -2110,9 +2136,10 @@ class _UniversityPortalsPage extends StatelessWidget {
       }
     } catch (_) {
       if (context.mounted) {
+        final loc = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذر فتح الرابط في المتصفح'),
+          SnackBar(
+            content: Text(loc.isArabic ? 'تعذر فتح الرابط في المتصفح' : 'Could not open link in browser'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -2121,6 +2148,7 @@ class _UniversityPortalsPage extends StatelessWidget {
   }
 
   static void _copyUrl(BuildContext context, String urlString, String title) {
+    final loc = AppLocalizations.of(context);
     Clipboard.setData(ClipboardData(text: urlString));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -2130,7 +2158,7 @@ class _UniversityPortalsPage extends StatelessWidget {
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'تم نسخ رابط $title بنجاح! 📋',
+                loc.isArabic ? 'تم نسخ رابط $title بنجاح! 📋' : '$title link copied successfully! 📋',
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),

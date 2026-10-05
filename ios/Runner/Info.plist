@@ -70,16 +70,24 @@
 	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ar</string>
+		<string>en</string>
+	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>https</string>
 		<string>http</string>
 		<string>tel</string>
 		<string>mailto</string>
+		<string>whatsapp</string>
 	</array>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>يحتاج تطبيق MET Schedule للوصول إلى مكتبة الصور لاختيار الخرائط والمستندات الدراسية.</string>
+	<string>يحتاج تطبيق MET Schedule للوصول إلى مكتبة الصور لاختيار الخرائط والمستندات الدراسية. / Requires photo library access to select campus maps and study documents.</string>
 	<key>NSCameraUsageDescription</key>
-	<string>يحتاج تطبيق MET Schedule لاستخدام الكاميرا لتصوير الجداول والمستندات الدراسية.</string>
+	<string>يحتاج تطبيق MET Schedule لاستخدام الكاميرا لتصوير الجداول والمستندات الدراسية. / Requires camera access to capture schedule and study documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>يحتاج تطبيق MET Schedule لحفظ الجداول والخرائط في مكتبة الصور. / Requires permission to save schedules and campus maps to your photo library.</string>
 </dict>
 </plist>

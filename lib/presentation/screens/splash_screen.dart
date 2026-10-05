@@ -6,7 +6,6 @@ library;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -50,14 +49,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animController.forward();
 
-    // Trigger schedule load early & check for Senior 2027 welcome notification
+    // Trigger schedule load early & check for Senior 2027 welcome notification (returning users)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = context.read<PreferencesCubit>().state;
       if (prefs.hasOnboarded) {
         context.read<ScheduleCubit>().loadSchedule(prefs.group, prefs.section);
+        NotificationService.instance.checkAndShowSeniorWelcomeOnFirstLaunch().ignore();
       }
-      final sp = await SharedPreferences.getInstance();
-      NotificationService.instance.checkAndShowSeniorWelcomeOnFirstLaunch(sp).ignore();
     });
 
     // Navigate to next screen after pleasant 2.0 second welcome

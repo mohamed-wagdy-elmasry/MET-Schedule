@@ -17,12 +17,14 @@ class ScheduleCard extends StatelessWidget {
   final ScheduleEntry entry;
   final bool isHighlighted;
   final bool showSectionBadge;
+  final PreferencesState? preferences;
 
   const ScheduleCard({
     super.key,
     required this.entry,
     this.isHighlighted = false,
     this.showSectionBadge = true,
+    this.preferences,
   });
 
   @override
@@ -32,12 +34,14 @@ class ScheduleCard extends StatelessWidget {
     final isDark = AppTheme.isDark(context);
     final isRest = entry.type == 'rest' || entry.type == 'project';
 
-    PreferencesState? prefs;
-    try {
-      prefs = context.watch<PreferencesCubit>().state;
-    } catch (_) {
-      prefs = null;
-    }
+    final prefs = preferences ?? () {
+      try {
+        return context.read<PreferencesCubit>().state;
+      } catch (_) {
+        return null;
+      }
+    }();
+
     final customColor = prefs?.getCustomSessionColor(entry.type);
     final color = isRest
         ? AppTheme.getRestColor(isDark, prefs?.getCustomSessionColor('rest'))
@@ -74,40 +78,40 @@ class ScheduleCard extends StatelessWidget {
       badgeIcon = Icons.edit_note_rounded;
     }
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: isArabic ? Alignment.centerRight : Alignment.centerLeft,
-          end: isArabic ? Alignment.centerLeft : Alignment.centerRight,
-          colors: isDark
-              ? [
-                  color.withValues(alpha: isRest ? 0.16 : (isHighlighted ? 0.22 : 0.12)),
-                  AppTheme.bgCard.withValues(alpha: 0.90),
-                ]
-              : [
-                  color.withValues(alpha: isRest ? 0.12 : (isHighlighted ? 0.15 : 0.07)),
-                  Colors.white,
-                ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha: isDark
-              ? (isHighlighted || isRest ? 0.45 : 0.20)
-              : (isHighlighted || isRest ? 0.50 : 0.25)),
-          width: isHighlighted || isRest ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: isDark
-                ? color.withValues(alpha: isHighlighted || isRest ? 0.18 : 0.06)
-                : const Color(0xFF64748B).withValues(alpha: isHighlighted || isRest ? 0.10 : 0.05),
-            blurRadius: isDark ? 20 : 14,
-            offset: const Offset(0, 4),
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: isArabic ? Alignment.centerRight : Alignment.centerLeft,
+            end: isArabic ? Alignment.centerLeft : Alignment.centerRight,
+            colors: isDark
+                ? [
+                    color.withValues(alpha: isRest ? 0.16 : (isHighlighted ? 0.22 : 0.12)),
+                    AppTheme.bgCard.withValues(alpha: 0.90),
+                  ]
+                : [
+                    color.withValues(alpha: isRest ? 0.12 : (isHighlighted ? 0.15 : 0.07)),
+                    Colors.white,
+                  ],
           ),
-        ],
-      ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: color.withValues(alpha: isDark
+                ? (isHighlighted || isRest ? 0.45 : 0.20)
+                : (isHighlighted || isRest ? 0.50 : 0.25)),
+            width: isHighlighted || isRest ? 1.5 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isDark
+                  ? color.withValues(alpha: isHighlighted || isRest ? 0.16 : 0.05)
+                  : const Color(0xFF64748B).withValues(alpha: isHighlighted || isRest ? 0.08 : 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
       child: Stack(
         children: [
           // Sleek vertical accent indicator strip on leading edge
@@ -142,35 +146,41 @@ class ScheduleCard extends StatelessWidget {
                 Row(
                   children: [
                     // Single Unified Type & Section Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: isDark ? 0.2 : 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: color.withValues(alpha: isDark ? 0.35 : 0.3),
-                          width: 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(badgeIcon, size: 13, color: color),
-                          const SizedBox(width: 5),
-                          Text(
-                            badgeText,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: color,
-                              letterSpacing: 0.3,
-                            ),
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: isDark ? 0.2 : 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: color.withValues(alpha: isDark ? 0.35 : 0.3),
+                            width: 1,
                           ),
-                        ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(badgeIcon, size: 13, color: color),
+                            const SizedBox(width: 5),
+                            Flexible(
+                              child: Text(
+                                badgeText,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: color,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
-                    const Spacer(),
+                    const SizedBox(width: 8),
 
                     // Time badge
                     Container(
@@ -196,12 +206,15 @@ class ScheduleCard extends StatelessWidget {
                             color: AppTheme.getTextSecondary(context),
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            entry.timeRange(isArabic),
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.getTextPrimary(context),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              entry.timeRange(isArabic),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.getTextPrimary(context),
+                              ),
                             ),
                           ),
                         ],
@@ -421,8 +434,9 @@ class ScheduleCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 /// Hero card for the upcoming/current class on the Today view.
@@ -442,20 +456,36 @@ class NextClassCard extends StatefulWidget {
   State<NextClassCard> createState() => _NextClassCardState();
 }
 
-class _NextClassCardState extends State<NextClassCard> {
+class _NextClassCardState extends State<NextClassCard> with WidgetsBindingObserver {
   Timer? _ticker;
 
   @override
   void initState() {
     super.initState();
-    // Live update every 10 seconds so clock & countdown update in real-time
-    _ticker = Timer.periodic(const Duration(seconds: 10), (_) {
+    WidgetsBinding.instance.addObserver(this);
+    _startTicker();
+  }
+
+  void _startTicker() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
       if (mounted) setState(() {});
     });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) setState(() {});
+      _startTicker();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _ticker?.cancel();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     super.dispose();
   }
@@ -526,43 +556,43 @@ class _NextClassCardState extends State<NextClassCard> {
     const heroAmberDark = Color(0xFFD97706);
     const heroOrange = Color(0xFFEA580C);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: isDark
-              ? const [
-                  Color(0xFF261908),
-                  Color(0xFF1E293B),
-                ]
-              : const [
-                  Color(0xFFFFFBEB),
-                  Colors.white,
-                ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: heroAmber.withValues(alpha: isDark ? 0.75 : 0.65),
-          width: 2.2,
-        ),
-        boxShadow: [
-          // Glowing Ambient Shadow
-          BoxShadow(
-            color: (isDark ? heroAmber : heroOrange).withValues(alpha: isDark ? 0.35 : 0.20),
-            blurRadius: 28,
-            spreadRadius: 1,
-            offset: const Offset(0, 10),
+    return RepaintBoundary(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isDark
+                ? const [
+                    Color(0xFF261908),
+                    Color(0xFF1E293B),
+                  ]
+                : const [
+                    Color(0xFFFFFBEB),
+                    Colors.white,
+                  ],
           ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.40 : 0.06),
-            blurRadius: 14,
-            offset: const Offset(0, 4),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: heroAmber.withValues(alpha: isDark ? 0.75 : 0.65),
+            width: 2.2,
           ),
-        ],
-      ),
+          boxShadow: [
+            // Ambient Shadow
+            BoxShadow(
+              color: (isDark ? heroAmber : heroOrange).withValues(alpha: isDark ? 0.25 : 0.15),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.30 : 0.04),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -855,8 +885,9 @@ class _NextClassCardState extends State<NextClassCard> {
           ],
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   int _dayIndex(String dayKey) {
     const order = ['saturday', 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];

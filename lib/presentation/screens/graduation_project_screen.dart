@@ -63,11 +63,13 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
       final launched =
           await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && mounted) {
-        _copyToClipboard(formattedUrl, 'تم نسخ الرابط');
+        final loc = AppLocalizations.of(context);
+        _copyToClipboard(formattedUrl, loc.isArabic ? 'تم نسخ الرابط' : 'Link copied');
       }
     } catch (_) {
       if (mounted) {
-        _copyToClipboard(formattedUrl, 'تم نسخ الرابط');
+        final loc = AppLocalizations.of(context);
+        _copyToClipboard(formattedUrl, loc.isArabic ? 'تم نسخ الرابط' : 'Link copied');
       }
     }
   }
@@ -78,19 +80,22 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     if (cleanNumber.startsWith('01')) {
       cleanNumber = '2$cleanNumber'; // Egypt country code
     }
-    final message = Uri.encodeComponent(
-        'السلام عليكم يا $memberName، بخصوص مشروع التخرج:');
+    final loc = AppLocalizations.of(context);
+    final msgText = loc.isArabic
+        ? 'السلام عليكم يا $memberName، بخصوص مشروع التخرج:'
+        : 'Hello $memberName, regarding the graduation project:';
+    final message = Uri.encodeComponent(msgText);
     final url = 'https://wa.me/$cleanNumber?text=$message';
     final uri = Uri.parse(url);
     try {
       final launched =
           await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && mounted) {
-        _copyToClipboard(phone, 'تم نسخ رقم الهاتف');
+        _copyToClipboard(phone, loc.isArabic ? 'تم نسخ رقم الهاتف' : 'Phone number copied');
       }
     } catch (_) {
       if (mounted) {
-        _copyToClipboard(phone, 'تم نسخ رقم الهاتف');
+        _copyToClipboard(phone, loc.isArabic ? 'تم نسخ رقم الهاتف' : 'Phone number copied');
       }
     }
   }
@@ -197,7 +202,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                                 ),
                               ),
                               child: Text(
-                                _data.projectTrack,
+                                _data.displayProjectTrack(loc.isArabic),
                                 style: const TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -207,7 +212,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              _data.projectName,
+                              _data.displayProjectName(loc.isArabic),
                               style: const TextStyle(
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800,
@@ -235,15 +240,15 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                   children: [
                     _buildInfoBadge(
                       icon: Icons.person_rounded,
-                      text: _data.doctorSupervisor,
+                      text: _data.displayDoctor(loc.isArabic),
                     ),
                     _buildInfoBadge(
                       icon: Icons.co_present_rounded,
-                      text: _data.taSupervisor,
+                      text: _data.displayTa(loc.isArabic),
                     ),
                     _buildInfoBadge(
                       icon: Icons.calendar_month_rounded,
-                      text: _data.meetingDays,
+                      text: _data.displayMeetingDays(loc.isArabic),
                       color: const Color(0xFF10B981),
                     ),
                   ],
@@ -341,23 +346,26 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              loc.isArabic
-                  ? '📁 روابط ومستندات المشروع'
-                  : '📁 Project Vault & Links',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.getTextPrimary(context),
+            Expanded(
+              child: Text(
+                loc.isArabic
+                    ? '📁 روابط ومستندات المشروع'
+                    : '📁 Project Vault & Links',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.getTextPrimary(context),
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             FilledButton.tonalIcon(
               onPressed: () => _showAddLinkSheet(context),
               icon: const Icon(Icons.add_link_rounded, size: 18),
               label: Text(loc.isArabic ? 'إضافة رابط' : 'Add Link'),
               style: FilledButton.styleFrom(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ],
@@ -374,17 +382,15 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
             onAction: () => _showAddLinkSheet(context),
           )
         else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _data.links.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
+          Column(
+            children: List.generate(_data.links.length, (index) {
               final link = _data.links[index];
               final iconData = _getLinkIcon(link.type);
               final iconColor = _getLinkColor(link.type);
 
-              return Container(
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.bgCard : Colors.white,
@@ -450,7 +456,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                           size: 20, color: AppTheme.getTextHint(context)),
                       onSelected: (val) {
                         if (val == 'copy') {
-                          _copyToClipboard(link.url, 'تم نسخ الرابط');
+                          _copyToClipboard(link.url, loc.isArabic ? 'تم نسخ الرابط' : 'Link copied');
                         } else if (val == 'delete') {
                           setState(() {
                             _data.links.removeAt(index);
@@ -487,9 +493,10 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                     ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
+        ),
       ],
     );
   }
@@ -539,23 +546,26 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              loc.isArabic
-                  ? '👥 فريق العمل وتوزيع الأدوار'
-                  : '👥 Team Members & Roles',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.getTextPrimary(context),
+            Expanded(
+              child: Text(
+                loc.isArabic
+                    ? '👥 فريق العمل وتوزيع الأدوار'
+                    : '👥 Team Members & Roles',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.getTextPrimary(context),
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             FilledButton.tonalIcon(
               onPressed: () => _showAddMemberSheet(context),
               icon: const Icon(Icons.person_add_rounded, size: 18),
               label: Text(loc.isArabic ? 'إضافة عضو' : 'Add Member'),
               style: FilledButton.styleFrom(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ],
@@ -573,15 +583,13 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
             onAction: () => _showAddMemberSheet(context),
           )
         else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: _data.teamMembers.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
+          Column(
+            children: List.generate(_data.teamMembers.length, (index) {
               final member = _data.teamMembers[index];
 
-              return Container(
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.bgCard : Colors.white,
@@ -702,9 +710,10 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                     ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
+        ),
       ],
     );
   }
@@ -726,23 +735,26 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              loc.isArabic
-                  ? '📋 قائمة المهام والتسليمات'
-                  : '📋 Tasks & Sprints',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.getTextPrimary(context),
+            Expanded(
+              child: Text(
+                loc.isArabic
+                    ? '📋 قائمة المهام والتسليمات'
+                    : '📋 Tasks & Sprints',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.getTextPrimary(context),
+                ),
               ),
             ),
+            const SizedBox(width: 8),
             FilledButton.tonalIcon(
               onPressed: () => _showAddTaskSheet(context),
               icon: const Icon(Icons.add_task_rounded, size: 18),
               label: Text(loc.isArabic ? 'مهمة جديدة' : 'Add Task'),
               style: FilledButton.styleFrom(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
             ),
           ],
@@ -788,16 +800,14 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
             onAction: () => _showAddTaskSheet(context),
           )
         else
-          ListView.separated(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: filteredTasks.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 10),
-            itemBuilder: (context, index) {
+          Column(
+            children: List.generate(filteredTasks.length, (index) {
               final task = filteredTasks[index];
               final catColor = _getCategoryColor(task.category);
 
-              return Container(
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: isDark ? AppTheme.bgCard : Colors.white,
@@ -932,9 +942,10 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                     ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
+            );
+          }),
+        ),
       ],
     );
   }
@@ -1022,11 +1033,8 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
           ],
         ),
         const SizedBox(height: 14),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          itemCount: _data.milestones.length,
-          itemBuilder: (context, index) {
+        Column(
+          children: List.generate(_data.milestones.length, (index) {
             final ms = _data.milestones[index];
             final isLast = index == _data.milestones.length - 1;
 
@@ -1124,7 +1132,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                               children: [
                                 Expanded(
                                   child: Text(
-                                    ms.title,
+                                    _data.milestoneTitle(ms, loc.isArabic),
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
@@ -1146,7 +1154,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(
-                                    ms.date,
+                                    _data.milestoneDate(ms, loc.isArabic),
                                     style: TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w600,
@@ -1158,7 +1166,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                             ),
                             const SizedBox(height: 6),
                             Text(
-                              ms.desc,
+                              _data.milestoneDesc(ms, loc.isArabic),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: AppTheme.getTextSecondary(context),
@@ -1173,7 +1181,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                 ],
               ),
             );
-          },
+          }),
         ),
       ],
     );
@@ -1474,21 +1482,21 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                   decoration: InputDecoration(
                     labelText: loc.isArabic ? 'نوع الرابط' : 'Link Type',
                   ),
-                  items: const [
-                    DropdownMenuItem(
+                  items: [
+                    const DropdownMenuItem(
                         value: 'drive',
                         child: Text('📁 Google Drive / Docs')),
-                    DropdownMenuItem(
+                    const DropdownMenuItem(
                         value: 'figma', child: Text('🎨 Figma UI/UX')),
-                    DropdownMenuItem(
+                    const DropdownMenuItem(
                         value: 'github', child: Text('💻 GitHub / Git')),
-                    DropdownMenuItem(
+                    const DropdownMenuItem(
                         value: 'slides',
                         child: Text('📊 Presentation / Slides')),
-                    DropdownMenuItem(
+                    const DropdownMenuItem(
                         value: 'docs', child: Text('📝 Documentation')),
                     DropdownMenuItem(
-                        value: 'other', child: Text('🔗 Other / عام')),
+                        value: 'other', child: Text(loc.isArabic ? '🔗 عام / أخرى' : '🔗 Other')),
                   ],
                   onChanged: (val) {
                     if (val != null) setSheetState(() => type = val);

@@ -213,6 +213,92 @@ class ProjectWorkspaceData {
     return completedItems / totalItems;
   }
 
+  String displayProjectName(bool isArabic) {
+    if (projectName == 'مشروع التخرج (اضغط لتعديل الاسم)' || projectName == 'Graduation Project (Tap to edit)') {
+      return isArabic ? 'مشروع التخرج (اضغط لتعديل الاسم)' : 'Graduation Project (Tap to edit)';
+    }
+    return projectName;
+  }
+
+  String displayProjectTrack(bool isArabic) {
+    if (projectTrack == 'نظم معلومات الأعمال — الفرقة الرابعة' || projectTrack == 'BIS — 4th Year Senior') {
+      return isArabic ? 'نظم معلومات الأعمال — الفرقة الرابعة' : 'BIS — 4th Year Senior';
+    }
+    return projectTrack;
+  }
+
+  String displayDoctor(bool isArabic) {
+    if (doctorSupervisor == 'المشرف الأكاديمي' || doctorSupervisor == 'Academic Supervisor') {
+      return isArabic ? 'المشرف الأكاديمي' : 'Academic Supervisor';
+    }
+    return doctorSupervisor;
+  }
+
+  String displayTa(bool isArabic) {
+    if (taSupervisor == 'المعيد المساعد' || taSupervisor == 'Teaching Assistant') {
+      return isArabic ? 'المعيد المساعد' : 'Teaching Assistant';
+    }
+    return taSupervisor;
+  }
+
+  String displayMeetingDays(bool isArabic) {
+    if (meetingDays == 'الاثنين & الخميس' || meetingDays == 'Monday & Thursday') {
+      return isArabic ? 'الاثنين & الخميس' : 'Monday & Thursday';
+    }
+    return meetingDays;
+  }
+
+  String milestoneTitle(ProjectMilestone ms, bool isArabic) {
+    switch (ms.id) {
+      case 'ms1':
+        return isArabic ? 'اختيار واعتماد فكرة المشروع' : 'Project Idea Approval';
+      case 'ms2':
+        return isArabic ? 'تسليم مقترح المشروع (Proposal)' : 'Project Proposal Submission';
+      case 'ms3':
+        return isArabic ? 'توثيق النظام وتصميم الواجهات (Ch. 1 & 2)' : 'System Docs & UI/UX Design';
+      case 'ms4':
+        return isArabic ? 'المناقشة النصفية (Midterm Review)' : 'Midterm Review & Demo';
+      case 'ms5':
+        return isArabic ? 'التسليم النهائي والمناقشة وحفل التخرج 🎓' : 'Final Submission & Defense 🎓';
+      default:
+        return ms.title;
+    }
+  }
+
+  String milestoneDesc(ProjectMilestone ms, bool isArabic) {
+    switch (ms.id) {
+      case 'ms1':
+        return isArabic ? 'تسجيل الفكرة واعتمادها من القسم' : 'Register and approve project topic';
+      case 'ms2':
+        return isArabic ? 'تقديم البروبوزال والجدول الزمني للعمل' : 'Submit project proposal & timeline';
+      case 'ms3':
+        return isArabic ? 'تحليل المتطلبات، المخططات، وتصميم UI/UX' : 'Requirements analysis, diagrams & prototype';
+      case 'ms4':
+        return isArabic ? 'عرض النموذج الأولي للبروجكت' : 'Present working prototype & progress';
+      case 'ms5':
+        return isArabic ? 'تسليم المشروع الكامل وكتاب التوثيق والمناقشة' : 'Final project deliverables, book & defense';
+      default:
+        return ms.desc;
+    }
+  }
+
+  String milestoneDate(ProjectMilestone ms, bool isArabic) {
+    switch (ms.id) {
+      case 'ms1':
+        return isArabic ? 'أكتوبر 2026' : 'October 2026';
+      case 'ms2':
+        return isArabic ? 'نوفمبر 2026' : 'November 2026';
+      case 'ms3':
+        return isArabic ? 'ديسمبر 2026' : 'December 2026';
+      case 'ms4':
+        return isArabic ? 'يناير 2027' : 'January 2027';
+      case 'ms5':
+        return isArabic ? 'مايو 2027' : 'May 2027';
+      default:
+        return ms.date;
+    }
+  }
+
   Map<String, dynamic> toJson() => {
         'projectName': projectName,
         'projectTrack': projectTrack,

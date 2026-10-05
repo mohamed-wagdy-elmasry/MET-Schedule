@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class ThemePalette {
   final String id;
@@ -220,9 +221,9 @@ class AppTheme {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       );
@@ -241,10 +242,10 @@ class AppTheme {
       boxShadow: [
         BoxShadow(
           color: dark
-              ? Colors.black.withValues(alpha: 0.3)
-              : const Color(0xFF64748B).withValues(alpha: 0.08),
-          blurRadius: 24,
-          offset: const Offset(0, 8),
+              ? Colors.black.withValues(alpha: 0.15)
+              : const Color(0xFF64748B).withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
         ),
       ],
     );
@@ -270,10 +271,10 @@ class AppTheme {
       boxShadow: [
         BoxShadow(
           color: dark
-              ? color.withValues(alpha: 0.1)
-              : const Color(0xFF64748B).withValues(alpha: 0.08),
-          blurRadius: 20,
-          offset: const Offset(0, 4),
+              ? color.withValues(alpha: 0.08)
+              : const Color(0xFF64748B).withValues(alpha: 0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 3),
         ),
       ],
     );
@@ -286,7 +287,6 @@ class AppTheme {
     return ThemeData(
       brightness: Brightness.dark,
       useMaterial3: true,
-      fontFamily: 'Cairo',
       scaffoldBackgroundColor: bgDark,
       colorScheme: ColorScheme.dark(
         primary: primaryColor,
@@ -304,7 +304,6 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontFamily: 'Cairo',
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: textPrimary,
@@ -328,7 +327,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Cairo',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -343,7 +341,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Cairo',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -365,7 +362,7 @@ class AppTheme {
           borderSide: BorderSide(color: primaryColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        hintStyle: const TextStyle(color: textHint, fontFamily: 'Cairo'),
+        hintStyle: const TextStyle(color: textHint),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: bgSurface,
@@ -377,7 +374,6 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: bgCardLight,
         contentTextStyle: const TextStyle(
-          fontFamily: 'Cairo',
           color: textPrimary,
         ),
         shape: RoundedRectangleBorder(
@@ -390,26 +386,26 @@ class AppTheme {
         thickness: 1,
       ),
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimary),
-        displayMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimary),
-        displaySmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimary),
-        headlineLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimary),
-        headlineMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimary),
-        headlineSmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimary),
-        titleLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimary),
-        titleMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w500, color: textPrimary),
-        titleSmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w500, color: textSecondary),
-        bodyLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textPrimary),
-        bodyMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textSecondary),
-        bodySmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textHint),
-        labelLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimary),
-        labelMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w500, color: textSecondary),
-        labelSmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textHint),
+        displayLarge: TextStyle(fontWeight: FontWeight.w700, color: textPrimary),
+        displayMedium: TextStyle(fontWeight: FontWeight.w700, color: textPrimary),
+        displaySmall: TextStyle(fontWeight: FontWeight.w700, color: textPrimary),
+        headlineLarge: TextStyle(fontWeight: FontWeight.w700, color: textPrimary),
+        headlineMedium: TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
+        headlineSmall: TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
+        titleLarge: TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
+        titleMedium: TextStyle(fontWeight: FontWeight.w500, color: textPrimary),
+        titleSmall: TextStyle(fontWeight: FontWeight.w500, color: textSecondary),
+        bodyLarge: TextStyle(fontWeight: FontWeight.w400, color: textPrimary),
+        bodyMedium: TextStyle(fontWeight: FontWeight.w400, color: textSecondary),
+        bodySmall: TextStyle(fontWeight: FontWeight.w400, color: textHint),
+        labelLarge: TextStyle(fontWeight: FontWeight.w600, color: textPrimary),
+        labelMedium: TextStyle(fontWeight: FontWeight.w500, color: textSecondary),
+        labelSmall: TextStyle(fontWeight: FontWeight.w400, color: textHint),
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: ZoomPageTransitionsBuilder(),
-          TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
     );
@@ -422,7 +418,6 @@ class AppTheme {
     return ThemeData(
       brightness: Brightness.light,
       useMaterial3: true,
-      fontFamily: 'Cairo',
       scaffoldBackgroundColor: bgLight,
       colorScheme: ColorScheme.light(
         primary: primaryColor,
@@ -440,7 +435,6 @@ class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontFamily: 'Cairo',
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: textPrimaryLight,
@@ -464,7 +458,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Cairo',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -479,7 +472,6 @@ class AppTheme {
             borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
-            fontFamily: 'Cairo',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -501,7 +493,7 @@ class AppTheme {
           borderSide: BorderSide(color: primaryColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        hintStyle: const TextStyle(color: textHintLight, fontFamily: 'Cairo'),
+        hintStyle: const TextStyle(color: textHintLight),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: bgSurfaceLight,
@@ -513,7 +505,6 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor: bgCardLightSurface,
         contentTextStyle: const TextStyle(
-          fontFamily: 'Cairo',
           color: textPrimaryLight,
         ),
         shape: RoundedRectangleBorder(
@@ -526,26 +517,26 @@ class AppTheme {
         thickness: 1,
       ),
       textTheme: const TextTheme(
-        displayLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimaryLight),
-        displayMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimaryLight),
-        displaySmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimaryLight),
-        headlineLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w700, color: textPrimaryLight),
-        headlineMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimaryLight),
-        headlineSmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimaryLight),
-        titleLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimaryLight),
-        titleMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w500, color: textPrimaryLight),
-        titleSmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w500, color: textSecondaryLight),
-        bodyLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textPrimaryLight),
-        bodyMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textSecondaryLight),
-        bodySmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textHintLight),
-        labelLarge: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600, color: textPrimaryLight),
-        labelMedium: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w500, color: textSecondaryLight),
-        labelSmall: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w400, color: textHintLight),
+        displayLarge: TextStyle(fontWeight: FontWeight.w700, color: textPrimaryLight),
+        displayMedium: TextStyle(fontWeight: FontWeight.w700, color: textPrimaryLight),
+        displaySmall: TextStyle(fontWeight: FontWeight.w700, color: textPrimaryLight),
+        headlineLarge: TextStyle(fontWeight: FontWeight.w700, color: textPrimaryLight),
+        headlineMedium: TextStyle(fontWeight: FontWeight.w600, color: textPrimaryLight),
+        headlineSmall: TextStyle(fontWeight: FontWeight.w600, color: textPrimaryLight),
+        titleLarge: TextStyle(fontWeight: FontWeight.w600, color: textPrimaryLight),
+        titleMedium: TextStyle(fontWeight: FontWeight.w500, color: textPrimaryLight),
+        titleSmall: TextStyle(fontWeight: FontWeight.w500, color: textSecondaryLight),
+        bodyLarge: TextStyle(fontWeight: FontWeight.w400, color: textPrimaryLight),
+        bodyMedium: TextStyle(fontWeight: FontWeight.w400, color: textSecondaryLight),
+        bodySmall: TextStyle(fontWeight: FontWeight.w400, color: textHintLight),
+        labelLarge: TextStyle(fontWeight: FontWeight.w600, color: textPrimaryLight),
+        labelMedium: TextStyle(fontWeight: FontWeight.w500, color: textSecondaryLight),
+        labelSmall: TextStyle(fontWeight: FontWeight.w400, color: textHintLight),
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
           TargetPlatform.android: ZoomPageTransitionsBuilder(),
-          TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
     );

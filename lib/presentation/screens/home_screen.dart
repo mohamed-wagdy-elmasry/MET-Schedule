@@ -43,107 +43,107 @@ class _HomeScreenState extends State<HomeScreen> {
         titleSpacing: 0,
         centerTitle: false,
         elevation: 0,
-        title: SizedBox(
-          width: double.infinity,
-          height: kToolbarHeight,
-          child: Stack(
-            alignment: Alignment.center,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
             children: [
-              // 1. BRAND LOGO & TITLE: STRICTLY MATHEMATICALLY CENTERED
-              Center(
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  textDirection: TextDirection.ltr,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3.5,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.primary, AppTheme.primaryDark],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primary.withValues(alpha: 0.35),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
+              // 1. THEME TOGGLE BUTTON (START SIDE)
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(11),
+                  onTap: () =>
+                      context.read<PreferencesCubit>().toggleThemeMode(),
+                  child: Container(
+                    width: 36,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primary.withValues(
+                            alpha: isDark ? 0.22 : 0.12,
+                          ),
+                          AppTheme.accent.withValues(
+                            alpha: isDark ? 0.12 : 0.08,
                           ),
                         ],
                       ),
-                      child: const Text(
-                        'MET',
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          color: Colors.white,
+                      borderRadius: BorderRadius.circular(11),
+                      border: Border.all(
+                        color: AppTheme.primary.withValues(
+                          alpha: isDark ? 0.35 : 0.25,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 7),
-                    Text(
-                      'Schedule',
-                      style: TextStyle(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.3,
-                        color: AppTheme.getTextPrimary(context),
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Icon(
+                          isDark
+                              ? Icons.light_mode_rounded
+                              : Icons.dark_mode_rounded,
+                          key: ValueKey(isDark),
+                          color: isDark
+                              ? const Color(0xFFFFD166)
+                              : AppTheme.primary,
+                          size: 19,
+                        ),
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
 
-              // 2. THEME TOGGLE BUTTON (START SIDE - Balanced Sleek Capsule)
-              PositionedDirectional(
-                start: 14,
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(11),
-                    onTap: () =>
-                        context.read<PreferencesCubit>().toggleThemeMode(),
-                    child: Container(
-                      width: 36,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            AppTheme.primary.withValues(
-                              alpha: isDark ? 0.22 : 0.12,
+              // 2. BRAND LOGO & TITLE: CENTERED & RESILIENT WITH FITTEDBOX
+              Expanded(
+                child: Center(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      textDirection: TextDirection.ltr,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3.5,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.primary, AppTheme.primaryDark],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                            AppTheme.accent.withValues(
-                              alpha: isDark ? 0.12 : 0.08,
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primary.withValues(alpha: 0.35),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'MET',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
+                              color: Colors.white,
                             ),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(11),
-                        border: Border.all(
-                          color: AppTheme.primary.withValues(
-                            alpha: isDark ? 0.35 : 0.25,
                           ),
                         ),
-                      ),
-                      child: Center(
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 250),
-                          child: Icon(
-                            isDark
-                                ? Icons.light_mode_rounded
-                                : Icons.dark_mode_rounded,
-                            key: ValueKey(isDark),
-                            color: isDark
-                                ? const Color(0xFFFFD166)
-                                : AppTheme.primary,
-                            size: 19,
+                        const SizedBox(width: 7),
+                        Text(
+                          'Schedule',
+                          style: TextStyle(
+                            fontSize: 14.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.3,
+                            color: AppTheme.getTextPrimary(context),
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
                 ),
@@ -151,71 +151,70 @@ class _HomeScreenState extends State<HomeScreen> {
 
               // 3. SCHEDULE VIEW TOGGLE (END SIDE - Only on Timetable tab)
               if (_currentIndex == 0)
-                PositionedDirectional(
-                  end: 14,
-                  child: BlocBuilder<ScheduleCubit, ScheduleState>(
-                    builder: (context, state) {
-                      final isToday = state.viewMode == ScheduleViewMode.today;
-                      return Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(11),
-                          onTap: () =>
-                              context.read<ScheduleCubit>().toggleView(),
-                          child: Container(
-                            height: 34,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  AppTheme.primary.withValues(
-                                    alpha: isDark ? 0.22 : 0.12,
-                                  ),
-                                  AppTheme.accent.withValues(
-                                    alpha: isDark ? 0.12 : 0.08,
-                                  ),
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(11),
-                              border: Border.all(
-                                color: AppTheme.primary.withValues(
-                                  alpha: isDark ? 0.35 : 0.25,
+                BlocBuilder<ScheduleCubit, ScheduleState>(
+                  builder: (context, state) {
+                    final isToday = state.viewMode == ScheduleViewMode.today;
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(11),
+                        onTap: () =>
+                            context.read<ScheduleCubit>().toggleView(),
+                        child: Container(
+                          height: 34,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppTheme.primary.withValues(
+                                  alpha: isDark ? 0.22 : 0.12,
                                 ),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  isToday
-                                      ? Icons.calendar_view_week_rounded
-                                      : Icons.today_rounded,
-                                  size: 14.5,
-                                  color: isDark
-                                      ? AppTheme.accent
-                                      : AppTheme.primary,
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  isToday
-                                      ? loc.weeklySchedule
-                                      : loc.todaySchedule,
-                                  style: TextStyle(
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.getTextPrimary(context),
-                                  ),
+                                AppTheme.accent.withValues(
+                                  alpha: isDark ? 0.12 : 0.08,
                                 ),
                               ],
                             ),
+                            borderRadius: BorderRadius.circular(11),
+                            border: Border.all(
+                              color: AppTheme.primary.withValues(
+                                alpha: isDark ? 0.35 : 0.25,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isToday
+                                    ? Icons.calendar_view_week_rounded
+                                    : Icons.today_rounded,
+                                size: 14.5,
+                                color: isDark
+                                    ? AppTheme.accent
+                                    : AppTheme.primary,
+                              ),
+                              const SizedBox(width: 5),
+                              Text(
+                                isToday
+                                    ? loc.weeklySchedule
+                                    : loc.todaySchedule,
+                                style: TextStyle(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppTheme.getTextPrimary(context),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      ),
+                    );
+                  },
+                )
+              else
+                const SizedBox(width: 36),
             ],
           ),
         ),
@@ -241,10 +240,10 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [
             BoxShadow(
               color: isDark
-                  ? Colors.black.withValues(alpha: 0.35)
-                  : const Color(0xFF64748B).withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
+                  ? Colors.black.withValues(alpha: 0.25)
+                  : const Color(0xFF64748B).withValues(alpha: 0.08),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
             ),
           ],
         ),
@@ -253,32 +252,46 @@ class _HomeScreenState extends State<HomeScreen> {
           child: SizedBox(
             height: 72,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                _NavItem(
-                  icon: Icons.calendar_today_rounded,
-                  label: loc.schedule,
-                  isActive: _currentIndex == 0,
-                  onTap: () => setState(() => _currentIndex = 0),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.calendar_today_rounded,
+                    label: loc.schedule,
+                    isActive: _currentIndex == 0,
+                    onTap: () {
+                      if (_currentIndex != 0) setState(() => _currentIndex = 0);
+                    },
+                  ),
                 ),
-                _NavItem(
-                  icon: Icons.school_rounded,
-                  label: loc.gradProject,
-                  isActive: _currentIndex == 1,
-                  onTap: () => setState(() => _currentIndex = 1),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.school_rounded,
+                    label: loc.gradProject,
+                    isActive: _currentIndex == 1,
+                    onTap: () {
+                      if (_currentIndex != 1) setState(() => _currentIndex = 1);
+                    },
+                  ),
                 ),
-                _NavItem(
-                  icon: Icons.build_circle_rounded,
-                  label: loc.tools,
-                  isActive: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.build_circle_rounded,
+                    label: loc.tools,
+                    isActive: _currentIndex == 2,
+                    onTap: () {
+                      if (_currentIndex != 2) setState(() => _currentIndex = 2);
+                    },
+                  ),
                 ),
-                _NavItem(
-                  icon: Icons.settings_rounded,
-                  label: loc.more,
-                  isActive: _currentIndex == 3,
-                  onTap: () => setState(() => _currentIndex = 3),
+                Expanded(
+                  child: _NavItem(
+                    icon: Icons.settings_rounded,
+                    label: loc.more,
+                    isActive: _currentIndex == 3,
+                    onTap: () {
+                      if (_currentIndex != 3) setState(() => _currentIndex = 3);
+                    },
+                  ),
                 ),
               ],
             ),
@@ -308,45 +321,48 @@ class _NavItem extends StatelessWidget {
     final activeColor = AppTheme.primary;
     final inactiveColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
 
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 72,
-        height: 72,
+    return RepaintBoundary(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? activeColor.withValues(alpha: isDark ? 0.20 : 0.12)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? activeColor.withValues(alpha: isDark ? 0.20 : 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 22,
+                    color: isActive ? activeColor : inactiveColor,
+                  ),
                 ),
-                child: Icon(
-                  icon,
-                  size: 24,
-                  color: isActive ? activeColor : inactiveColor,
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                      color: isActive ? activeColor : inactiveColor,
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
-                  color: isActive ? activeColor : inactiveColor,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

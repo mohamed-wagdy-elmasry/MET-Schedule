@@ -88,6 +88,20 @@ class METApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
+              // ── Clamp text scaling to prevent UI overflow
+              //    with large accessibility font sizes ──
+              builder: (context, child) {
+                return MediaQuery(
+                  data: MediaQuery.of(context).copyWith(
+                    textScaler: MediaQuery.of(context).textScaler.clamp(
+                      minScaleFactor: 0.8,
+                      maxScaleFactor: 1.15,
+                    ),
+                  ),
+                  child: child!,
+                );
+              },
+
               // ── Routing ──
               home: const SplashScreen(),
             ),

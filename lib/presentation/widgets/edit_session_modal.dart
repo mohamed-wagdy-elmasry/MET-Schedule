@@ -73,8 +73,8 @@ class _EditSessionModalState extends State<EditSessionModal> {
           ? e.instructors.join(' / ')
           : (e?.instructorNameAr ?? ''),
     );
-    _startTimeCtrl = TextEditingController(text: e?.startTime ?? '08:45 ص');
-    _endTimeCtrl = TextEditingController(text: e?.endTime ?? '10:15 ص');
+    _startTimeCtrl = TextEditingController(text: e?.startTime ?? '');
+    _endTimeCtrl = TextEditingController(text: e?.endTime ?? '');
     _noteCtrl = TextEditingController(text: e?.noteAr ?? '');
 
     _selectedType = e?.type ?? 'section';
@@ -243,9 +243,9 @@ class _EditSessionModalState extends State<EditSessionModal> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _startTimeCtrl,
-                        decoration: const InputDecoration(
-                          hintText: '08:45 ص',
-                          prefixIcon: Icon(Icons.access_time_rounded, size: 18),
+                        decoration: InputDecoration(
+                          hintText: isArabic ? '08:45 ص' : '08:45 AM',
+                          prefixIcon: const Icon(Icons.access_time_rounded, size: 18),
                         ),
                       ),
                     ],
@@ -260,9 +260,9 @@ class _EditSessionModalState extends State<EditSessionModal> {
                       const SizedBox(height: 6),
                       TextField(
                         controller: _endTimeCtrl,
-                        decoration: const InputDecoration(
-                          hintText: '10:15 ص',
-                          prefixIcon: Icon(Icons.access_time_filled_rounded, size: 18),
+                        decoration: InputDecoration(
+                          hintText: isArabic ? '10:15 ص' : '10:15 AM',
+                          prefixIcon: const Icon(Icons.access_time_filled_rounded, size: 18),
                         ),
                       ),
                     ],
@@ -386,18 +386,26 @@ class _EditSessionModalState extends State<EditSessionModal> {
   }
 
   void _save(BuildContext context) {
+    final loc = AppLocalizations.of(context);
+    final isArabic = loc.isArabic;
     final subject = _subjectCtrl.text.trim();
     if (subject.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('يرجى إدخال اسم المادة')),
+        SnackBar(content: Text(isArabic ? 'يرجى إدخال اسم المادة' : 'Please enter subject name')),
       );
       return;
     }
 
     final room = _roomCtrl.text.trim();
     final instructor = _instructorCtrl.text.trim();
-    final startTime = _startTimeCtrl.text.trim();
-    final endTime = _endTimeCtrl.text.trim();
+    final defaultStart = isArabic ? '08:45 ص' : '08:45 AM';
+    final defaultEnd = isArabic ? '10:15 ص' : '10:15 AM';
+    final startTime = _startTimeCtrl.text.trim().isNotEmpty
+        ? _startTimeCtrl.text.trim()
+        : defaultStart;
+    final endTime = _endTimeCtrl.text.trim().isNotEmpty
+        ? _endTimeCtrl.text.trim()
+        : defaultEnd;
     final note = _noteCtrl.text.trim().isNotEmpty ? _noteCtrl.text.trim() : null;
 
     final instructors = ScheduleEntry.parseInstructors(instructor);
@@ -453,7 +461,11 @@ class _EditSessionModalState extends State<EditSessionModal> {
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(_isEditing ? '✅ تم تحديث بيانات المحاضرة بنجاح' : '✅ تمت إضافة المحاضرة إلى الجدول بنجاح'),
+        content: Text(
+          _isEditing
+              ? (isArabic ? '✅ تم تحديث بيانات المحاضرة بنجاح' : '✅ Lecture updated successfully')
+              : (isArabic ? '✅ تمت إضافة المحاضرة إلى الجدول بنجاح' : '✅ Lecture added to schedule successfully'),
+        ),
         duration: const Duration(seconds: 2),
       ),
     );

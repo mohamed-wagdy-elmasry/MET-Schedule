@@ -7,40 +7,52 @@ class FridayData {
 
   static const String hadithHeader =
       '«إِنَّ مِنْ أَفْضَلِ أَيَّامِكُمْ يَوْمَ الْجُمُعَةِ، فِيهِ خُلِقَ آدَمُ، وَفِيهِ قُبِضَ، وَفِيهِ النَّفْخَةُ، وَفِيهِ الصَّعْقَةُ، فَأَكْثِرُوا عَلَيَّ مِنَ الصَّلَاةِ فِيهِ فَإِنَّ صَلَاتَكُمْ مَعْرُوضَةٌ عَلَيَّ»';
+  static const String hadithHeaderEn =
+      'The Prophet ﷺ said: "Among the best of your days is Friday. On it Adam was created and on it he died, on it the trumpet will be blown, and on it all creatures will swoon. So send abundant blessings upon me on it, for your blessings are presented to me."';
 
   static const List<Map<String, dynamic>> sunan = [
     {
       'id': 'kahf',
       'title': 'قراءة سورة الكهف',
+      'titleEn': 'Recite Surah Al-Kahf',
       'subtitle': 'نورٌ يضيء لك ما بين الجمعتين',
+      'subtitleEn': 'A light illuminating between the two Fridays',
       'icon': 'book',
       'hadith': '«مَنْ قَرَأَ سُورَةَ الْكَهْفِ فِي يَوْمِ الْجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَيْنَ الْجُمُعَتَيْنِ»',
     },
     {
       'id': 'salawat',
       'title': 'الإكثار من الصلاة على النبي ﷺ',
+      'titleEn': 'Send Blessings upon the Prophet ﷺ',
       'subtitle': 'تُعرض صلاتك عليه وتُكفى همّك',
+      'subtitleEn': 'Your blessings are presented to him',
       'icon': 'favorite',
       'hadith': '«أَكْثِرُوا عَلَيَّ مِنَ الصَّلَاةِ فِي كُلِّ يَوْمِ جُمُعَةٍ؛ فَإِنَّ صَلَاةَ أُمَّتِي تُعْرَضُ عَلَيَّ فِي كُلِّ يَوْمِ جُمُعَةٍ»',
     },
     {
       'id': 'ghusl',
       'title': 'الغُسل والتطيّب والسواك',
+      'titleEn': 'Ghusl, Fragrance & Siwak',
       'subtitle': 'لبس أحسن الثياب والتطهر للجمعة',
+      'subtitleEn': 'Purification and best clothes for Friday',
       'icon': 'clean_hands',
       'hadith': '«غُسْلُ يَوْمِ الْجُمُعَةِ وَاجِبٌ عَلَى كُلِّ مُحْتَلِمٍ، وَأَنْ يَسْتَنَّ، وَأَنْ يَمَسَّ طِيبًا إِنْ وَجَدَ»',
     },
     {
       'id': 'early',
       'title': 'التبكير إلى صلاة الجمعة',
+      'titleEn': 'Early Arrival for Friday Prayer',
       'subtitle': 'المشي بسكينة والإنصات للخطبة',
+      'subtitleEn': 'Walking calmly and listening to Khutbah',
       'icon': 'mosque',
       'hadith': '«مَنِ اغْتَسَلَ يَوْمَ الْجُمُعَةِ غُسْلَ الْجَنَابَةِ ثُمَّ رَاحَ فَكَأَنَّمَا قَرَّبَ بَدَنَةً...»',
     },
     {
       'id': 'dua',
       'title': 'تحري ساعة الاستجابة',
+      'titleEn': 'Seek the Hour of Acceptance',
       'subtitle': 'أرجى أوقاتها آخر ساعة بعد العصر',
+      'subtitleEn': 'Best sought in the final hour after Asr',
       'icon': 'volunteer_activism',
       'hadith': '«فِيهَا سَاعَةٌ لَا يُوَافِقُهَا عَبْدٌ مُسْلِمٌ، وَهُوَ قَائِمٌ يُصَلِّي، يَسْأَلُ اللَّهَ تَعَالَى شَيْئًا، إِلَّا أَعْطَاهُ إِيَّاهُ»',
     },
@@ -49,27 +61,35 @@ class FridayData {
   static const List<Map<String, String>> azkarAndDuas = [
     {
       'title': 'سيد الاستغفار',
+      'titleEn': 'Sayyid al-Istighfar',
       'content':
           'اللَّهُمَّ أَنْتَ رَبِّي لَا إِلَهَ إِلَّا أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لَا يَغْفِرُ الذُّنُوبَ إِلَّا أَنْتَ.',
       'reward': 'من قالها موقناً بها حين يمسي فمات من ليلته دخل الجنة، وكذلك حين يصبح.',
+      'rewardEn': 'Whoever says it with conviction will enter Paradise.',
     },
     {
       'title': 'الصلاة الإبراهيمية',
+      'titleEn': 'As-Salat Al-Ibrahimiyyah',
       'content':
           'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ كَمَا صَلَّيْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ إِنَّكَ حَمِيدٌ مَجِيدٌ، اللَّهُمَّ بَارِكْ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ كَمَا بَارَكْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ إِنَّكَ حَمِيدٌ مَجِيدٌ.',
       'reward': 'أفضل صيغ الصلاة على النبي ﷺ.',
+      'rewardEn': 'The most complete form of sending blessings upon the Prophet ﷺ.',
     },
     {
       'title': 'دعاء ساعة الاستجابة ويوم الجمعة',
+      'titleEn': 'Supplication for Friday Acceptance Hour',
       'content':
           'اللَّهُمَّ فِي يَوْمِ الْجُمُعَةِ اجْعَلْنَا مِمَّنْ عَفَوْتَ عَنْهُمْ، وَرَضِيتَ عَنْهُمْ، وَغَفَرْتَ لَهُمْ، وَحَرَّمْتَهُمْ عَلَى النَّارِ، وَكَتَبْتَ لَهُمُ الْجَنَّةَ، اللَّهُمَّ اشْفِ مَرْضَانَا، وَارْحَمْ مَوْتَانَا، وَاشْرَحْ صُدُورَنَا، وَيَسِّرْ أُمُورَنَا، وَوَفِّقْنَا فِي دِرَاسَتِنَا وَحَيَاتِنَا يَا رَبَّ الْعَالَمِينَ.',
       'reward': 'دعاء جامع للخير والبركة والتوفيق.',
+      'rewardEn': 'A comprehensive Dua for goodness, blessing, and success.',
     },
     {
       'title': 'الاستغفار والتسبيح',
+      'titleEn': 'Praise & Glorification',
       'content':
           'سُبْحَانَ اللَّهِ وَبِحَمْدِهِ عَدَدَ خَلْقِهِ، وَرِضَا نَفْسِهِ، وَزِنَةَ عَرْشِهِ، وَمِدَادَ كَلِمَاتِهِ.',
       'reward': 'تعدل ساعات طويلة من الذكر والتسبيح.',
+      'rewardEn': 'Equals many hours of continuous remembrance of Allah.',
     },
   ];
 

@@ -38,6 +38,11 @@ class NotificationService {
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
+        defaultPresentAlert: true,
+        defaultPresentSound: true,
+        defaultPresentBadge: true,
+        defaultPresentBanner: true,
+        defaultPresentList: true,
       );
 
       await _plugin.initialize(
@@ -98,9 +103,15 @@ class NotificationService {
           badge: true,
           sound: true,
         );
-        return granted ?? true;
+        if (granted == true) return true;
+        try {
+          final settings = await iosPlugin.checkPermissions();
+          return settings?.isAlertEnabled ?? false;
+        } catch (_) {
+          return granted ?? false;
+        }
       }
-      return true;
+      return false;
     }
 
     if (!Platform.isAndroid) return true;
@@ -171,6 +182,8 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        presentBanner: true,
+        presentList: true,
       );
 
       await _plugin.show(
@@ -214,6 +227,8 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        presentBanner: true,
+        presentList: true,
       );
 
       await _plugin.zonedSchedule(
@@ -245,8 +260,19 @@ class NotificationService {
   /// Schedules weekly recurring notifications for every entry in [entries].
   Future<void> scheduleAllNotifications(List<ScheduleEntry> entries) async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final enabled = prefs.getBool(AppConstants.prefNotificationsEnabled) ?? true;
+      if (!enabled) {
+        await cancelAll();
+        return;
+      }
+
       await init();
-      await requestPermission();
+      final granted = await requestPermission();
+      if (!granted) {
+        debugPrint('[NotificationService] Cannot schedule: Permission not granted');
+        return;
+      }
 
       // Cancel all existing before re-scheduling to avoid duplicates.
       await _plugin.cancelAll();
@@ -311,6 +337,8 @@ class NotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      presentBanner: true,
+      presentList: true,
     );
 
     try {
@@ -376,16 +404,31 @@ class NotificationService {
       'thursday': DateTime.thursday,
       'friday': DateTime.friday,
     };
-    return mapping[day];
+    return mapping[day.toLowerCase().trim()];
   }
 
   /// Sends an immediate welcome notification for Senior 2027 upon first setup/launch.
-  Future<void> showSeniorWelcomeNotification() async {
+  Future<bool> showSeniorWelcomeNotification({bool? isArabic}) async {
     try {
       await init();
-      await requestPermission();
+      final granted = await requestPermission();
+      if (!granted) {
+        debugPrint('[NotificationService] Welcome notification skipped: Permission not granted');
+        return false;
+      }
 
-      const androidDetails = AndroidNotificationDetails(
+      final prefs = await SharedPreferences.getInstance();
+      final ar = isArabic ?? (prefs.getString('selected_locale') ?? 'ar') == 'ar';
+
+      final title = ar ? 'Senior 2027 🎓🎉 | مرحباً بك' : 'Senior 2027 🎓🎉 | Welcome!';
+      final body = ar
+          ? 'نتمنى لك فصلاً دراسياً موفقاً وتخرجاً بامتياز إن شاء الله! 🥳🚀'
+          : 'Wishing you a successful semester and graduating with honors! 🥳🚀';
+      final bigText = ar
+          ? 'أهلاً بك يا بطل في سنتك الأخيرة! 🎉✨ نتمنى لك فصلاً دراسياً موفقاً ومليئاً بالإنجازات والتخرج بامتياز إن شاء الله! 🥳🎓🚀'
+          : 'Welcome to your senior year! 🎉✨ Wishing you a great semester full of achievements and graduation with honors! 🥳🎓🚀';
+
+      final androidDetails = AndroidNotificationDetails(
         'met_welcome_channel',
         'Senior Welcome',
         channelDescription: 'Senior 2027 Welcome Notification',
@@ -393,39 +436,42 @@ class NotificationService {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
-        styleInformation: BigTextStyleInformation(
-          'أهلاً بك يا بطل في سنتك الأخيرة! 🎉✨ نتمنى لك فصلاً دراسياً موفقاً ومليئاً بالإنجازات والتخرج بامتياز إن شاء الله! 🥳🎓🚀',
-        ),
+        styleInformation: BigTextStyleInformation(bigText),
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
+        presentBanner: true,
+        presentList: true,
       );
 
       await _plugin.show(
         2027,
-        'Senior 2027 🎓🎉 | مرحباً بك',
-        'نتمنى لك فصلاً دراسياً موفقاً وتخرجاً بامتياز إن شاء الله! 🥳🚀',
-        const NotificationDetails(android: androidDetails, iOS: iosDetails),
+        title,
+        body,
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
       );
       debugPrint('[NotificationService] Senior welcome notification sent successfully');
+      return true;
     } catch (e) {
       debugPrint('[NotificationService] Error showing welcome notification: $e');
+      return false;
     }
   }
 
   /// Automatically displays the Senior 2027 welcome notification on the user's first launch.
-  Future<void> checkAndShowSeniorWelcomeOnFirstLaunch(SharedPreferences prefs) async {
+  Future<void> checkAndShowSeniorWelcomeOnFirstLaunch([SharedPreferences? prefs]) async {
+    final sp = prefs ?? await SharedPreferences.getInstance();
     const key = 'has_shown_senior_welcome_v2';
-    final alreadyShown = prefs.getBool(key) ?? false;
-    if (!alreadyShown) {
-      await prefs.setBool(key, true);
-      // Brief delay to allow initial UI transition and Android notification service warmup
-      Future.delayed(const Duration(milliseconds: 1500), () {
-        showSeniorWelcomeNotification();
-      });
+    final alreadyShown = sp.getBool(key) ?? false;
+    if (alreadyShown) return;
+
+    final isAr = (sp.getString('selected_locale') ?? 'ar') == 'ar';
+    final sent = await showSeniorWelcomeNotification(isArabic: isAr);
+    if (sent) {
+      await sp.setBool(key, true);
     }
   }
 }

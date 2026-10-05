@@ -85,48 +85,9 @@ class SettingsScreen extends StatelessWidget {
 
             // ── Appearance / Theme (Dark & Light) ──
             SliverToBoxAdapter(
-              child: _SettingTile(
-                icon: isDark
-                    ? Icons.dark_mode_rounded
-                    : Icons.light_mode_rounded,
-                title: loc.themeMode,
-                subtitle: isDark ? loc.darkMode : loc.lightMode,
-                trailing: Container(
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppTheme.bgCardLight
-                        : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.08)
-                          : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(3),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _ThemeButton(
-                        icon: Icons.dark_mode_rounded,
-                        label: loc.darkMode,
-                        isSelected: isDark,
-                        onTap: () => context
-                            .read<PreferencesCubit>()
-                            .setThemeMode(ThemeMode.dark),
-                      ),
-                      const SizedBox(width: 4),
-                      _ThemeButton(
-                        icon: Icons.light_mode_rounded,
-                        label: loc.lightMode,
-                        isSelected: !isDark,
-                        onTap: () => context
-                            .read<PreferencesCubit>()
-                            .setThemeMode(ThemeMode.light),
-                      ),
-                    ],
-                  ),
-                ),
+              child: _AppearanceSettingCard(
+                isDark: isDark,
+                loc: loc,
               ),
             ),
 
@@ -456,9 +417,10 @@ class SettingsScreen extends StatelessWidget {
       }
     } catch (_) {
       if (context.mounted) {
+        final loc = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تعذر فتح الرابط'),
+          SnackBar(
+            content: Text(loc.isArabic ? 'تعذر فتح الرابط' : 'Could not open link'),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -832,6 +794,118 @@ class _SettingTile extends StatelessWidget {
   }
 }
 
+class _AppearanceSettingCard extends StatelessWidget {
+  final bool isDark;
+  final AppLocalizations loc;
+
+  const _AppearanceSettingCard({
+    required this.isDark,
+    required this.loc,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.bgCard.withValues(alpha: 0.5) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.06)
+              : const Color(0xFFE2E8F0),
+        ),
+        boxShadow: isDark
+            ? []
+            : [
+                BoxShadow(
+                  color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                size: 22,
+                color: isDark ? AppTheme.textSecondary : AppTheme.primary,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      loc.themeMode,
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.getTextPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      isDark ? loc.darkMode : loc.lightMode,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.getTextHint(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppTheme.bgCardLight : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : const Color(0xFFE2E8F0),
+              ),
+            ),
+            padding: const EdgeInsets.all(4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _ThemeButton(
+                    icon: Icons.dark_mode_rounded,
+                    label: loc.darkMode,
+                    isSelected: isDark,
+                    onTap: () => context
+                        .read<PreferencesCubit>()
+                        .setThemeMode(ThemeMode.dark),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: _ThemeButton(
+                    icon: Icons.light_mode_rounded,
+                    label: loc.lightMode,
+                    isSelected: !isDark,
+                    onTap: () => context
+                        .read<PreferencesCubit>()
+                        .setThemeMode(ThemeMode.light),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ThemeButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -851,7 +925,7 @@ class _ThemeButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
@@ -866,22 +940,28 @@ class _ThemeButton extends StatelessWidget {
               : [],
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 14,
+              size: 15,
               color: isSelected ? Colors.white : AppTheme.getTextHint(context),
             ),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                color: isSelected
-                    ? Colors.white
-                    : AppTheme.getTextSecondary(context),
+            const SizedBox(width: 6),
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? Colors.white
+                        : AppTheme.getTextSecondary(context),
+                  ),
+                ),
               ),
             ),
           ],

@@ -49,21 +49,38 @@ class _TodayView extends StatefulWidget {
   State<_TodayView> createState() => _TodayViewState();
 }
 
-class _TodayViewState extends State<_TodayView> {
+class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
   Timer? _timer;
   bool _showCompletedClasses = false;
 
   @override
   void initState() {
     super.initState();
-    // Live timer ticking every 20 seconds so end of day and upcoming times update automatically
-    _timer = Timer.periodic(const Duration(seconds: 20), (_) {
+    WidgetsBinding.instance.addObserver(this);
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    // Live timer ticking every 60 seconds to refresh time-based state smoothly
+    _timer = Timer.periodic(const Duration(seconds: 60), (_) {
       if (mounted) setState(() {});
     });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (mounted) setState(() {});
+      _startTimer();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _timer?.cancel();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     super.dispose();
   }
@@ -126,14 +143,14 @@ class _TodayViewState extends State<_TodayView> {
                         color: const Color(0xFF00B894).withValues(alpha: isDark ? 0.3 : 0.4),
                       ),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.spa_rounded, size: 14, color: Color(0xFF00B894)),
-                        SizedBox(width: 4),
+                        const Icon(Icons.spa_rounded, size: 14, color: Color(0xFF00B894)),
+                        const SizedBox(width: 4),
                         Text(
-                          'يوم الجمعة',
-                          style: TextStyle(
+                          loc.isArabic ? 'يوم الجمعة' : 'Friday',
+                          style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: Color(0xFF00B894),
@@ -420,8 +437,10 @@ class _TodayViewState extends State<_TodayView> {
                       ),
                     ],
                     const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 10,
+                      runSpacing: 8,
                       children: [
                         ElevatedButton.icon(
                           onPressed: () => context.read<ScheduleCubit>().toggleView(),
@@ -437,7 +456,6 @@ class _TodayViewState extends State<_TodayView> {
                             style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                           ),
                         ),
-                        const SizedBox(width: 10),
                         OutlinedButton.icon(
                           onPressed: () => setState(() => _showCompletedClasses = true),
                           style: OutlinedButton.styleFrom(
@@ -651,6 +669,7 @@ class _TodayViewState extends State<_TodayView> {
                   return ScheduleCard(
                     entry: entry,
                     isHighlighted: !entry.isForAllSections,
+                    preferences: prefs,
                   );
                 },
                 childCount: state.todayEntries.length,
@@ -923,6 +942,7 @@ class _WeekViewState extends State<_WeekView> {
                   return ScheduleCard(
                     entry: entries[index],
                     isHighlighted: !entries[index].isForAllSections,
+                    preferences: context.read<PreferencesCubit>().state,
                   );
                 },
               );

@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/services/notification_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../data/datasources/friday_data.dart';
 import '../../domain/entities/schedule_entry.dart';
 import '../bloc/preferences_cubit.dart';
 import 'edit_session_modal.dart';
@@ -72,10 +73,13 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
   }
 
   Future<void> _testNotification(BuildContext context) async {
-    HapticFeedback.mediumImpact();
+    final loc = AppLocalizations.of(context);
+    final isArabic = loc.isArabic;
     final success = await NotificationService.instance.showInstantTestNotification(
-      title: 'MET Schedule 🔔 | إشعار تجريبي',
-      body: 'نظام الإشعارات يعمل بنجاح! جمعة مباركة وتقبل الله طاعتكم 🌸',
+      title: isArabic ? 'MET Schedule 🔔 | إشعار تجريبي' : 'MET Schedule 🔔 | Test Notification',
+      body: isArabic
+          ? 'نظام الإشعارات يعمل بنجاح! جمعة مباركة وتقبل الله طاعتكم 🌸'
+          : 'Notification system is working! Blessed Friday 🌸',
     );
 
     if (context.mounted) {
@@ -83,8 +87,12 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
         SnackBar(
           content: Text(
             success
-                ? '✅ تم إرسال الإشعار بنجاح! تفقد شريط الإشعارات أعلى الشاشة'
-                : '⚠️ يرجى تفعيل إذن الإشعارات من إعدادات الهاتف',
+                ? (isArabic
+                    ? '✅ تم إرسال الإشعار بنجاح! تفقد شريط الإشعارات أعلى الشاشة'
+                    : '✅ Notification sent! Check your notification bar')
+                : (isArabic
+                    ? '⚠️ يرجى تفعيل إذن الإشعارات من إعدادات الهاتف'
+                    : '⚠️ Please enable notifications in phone settings'),
           ),
           backgroundColor: success ? AppTheme.success : AppTheme.error,
           behavior: SnackBarBehavior.floating,
@@ -155,14 +163,14 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                           color: const Color(0xFF00B894).withValues(alpha: 0.5),
                         ),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star_rounded, size: 16, color: Color(0xFF00B894)),
-                          SizedBox(width: 6),
+                          const Icon(Icons.star_rounded, size: 16, color: Color(0xFF00B894)),
+                          const SizedBox(width: 6),
                           Text(
-                            'عطلة أسبوعية مباركة',
-                            style: TextStyle(
+                            isArabic ? 'عطلة أسبوعية مباركة' : 'Blessed Weekend',
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFF00B894),
@@ -173,7 +181,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                     ),
                     const Spacer(),
                     IconButton(
-                      tooltip: 'تجربة الإشعار الفوري',
+                      tooltip: isArabic ? 'تجربة الإشعار الفوري' : 'Test Notification',
                       onPressed: () => _testNotification(context),
                       icon: Icon(
                         Icons.notifications_active_rounded,
@@ -185,7 +193,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                 ),
                 const SizedBox(height: 14),
                 Text(
-                  'جمعة مباركة 🌸',
+                  isArabic ? 'جمعة مباركة 🌸' : 'Blessed Friday 🌸',
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w900,
@@ -195,7 +203,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  FridayData.hadithHeader,
+                  isArabic ? FridayData.hadithHeader : FridayData.hadithHeaderEn,
                   style: TextStyle(
                     fontSize: 13,
                     height: 1.6,
@@ -245,19 +253,23 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.favorite_rounded, color: Color(0xFFE84393), size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'عِداد الصلاة على النبي ﷺ',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.getTextPrimary(context),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          const Icon(Icons.favorite_rounded, color: Color(0xFFE84393), size: 20),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              isArabic ? 'عِداد الصلاة على النبي ﷺ' : 'Salawat Counter',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.getTextPrimary(context),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     if (_salawatCount > 0)
                       GestureDetector(
@@ -269,7 +281,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            'إعادة ضبط',
+                            isArabic ? 'إعادة ضبط' : 'Reset',
                             style: TextStyle(fontSize: 11, color: AppTheme.getTextHint(context)),
                           ),
                         ),
@@ -287,6 +299,19 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                     height: 1.4,
                   ),
                 ),
+                if (!isArabic) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'O Allah, send blessings and peace upon our Prophet Muhammad',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.getTextSecondary(context),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 // Tap Button / Counter Circle
                 AnimatedScale(
@@ -325,9 +350,9 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                               color: Colors.white,
                             ),
                           ),
-                          const Text(
-                            'انقر للصلاة',
-                            style: TextStyle(
+                          Text(
+                            isArabic ? 'انقر للصلاة' : 'Tap to Count',
+                            style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: Colors.white70,
@@ -348,27 +373,30 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'سنن وآداب يوم الجمعة ✨',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.getTextPrimary(context),
+              Expanded(
+                child: Text(
+                  isArabic ? 'سنن وآداب يوم الجمعة ✨' : 'Friday Sunan & Etiquette ✨',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.getTextPrimary(context),
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               TextButton.icon(
                 onPressed: () => _openSurahKahfReader(context),
                 icon: Icon(
                   Icons.menu_book_rounded,
-                  size: 18,
+                  size: 16,
                   color: isDark ? AppTheme.accent : AppTheme.primary,
                 ),
                 label: Text(
-                  'سورة الكهف 📖',
+                  isArabic ? 'سورة الكهف' : 'Surah Al-Kahf',
                   style: TextStyle(
                     color: isDark ? AppTheme.accent : AppTheme.primary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                    fontSize: 12.5,
                   ),
                 ),
               ),
@@ -438,7 +466,9 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            sunnah['title'] as String,
+                            isArabic
+                                ? (sunnah['title'] as String)
+                                : ((sunnah['titleEn'] ?? sunnah['title']) as String),
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
@@ -451,7 +481,9 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            sunnah['subtitle'] as String,
+                            isArabic
+                                ? (sunnah['subtitle'] as String)
+                                : ((sunnah['subtitleEn'] ?? sunnah['subtitle']) as String),
                             style: TextStyle(
                               fontSize: 12,
                               color: AppTheme.getTextSecondary(context),
@@ -468,7 +500,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'قراءة 📖',
+                          isArabic ? 'قراءة 📖' : 'Read 📖',
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -486,7 +518,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
 
           // ── 4. Friday Azkar & Duas ──
           Text(
-            'أدعية وأذكار مستحبة 🤲',
+            isArabic ? 'أدعية وأذكار مستحبة 🤲' : 'Recommended Duas & Azkar 🤲',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
@@ -521,14 +553,19 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        dua['title']!,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isDark ? AppTheme.accent : AppTheme.primary,
+                      Expanded(
+                        child: Text(
+                          isArabic
+                              ? dua['title']!
+                              : (dua['titleEn'] ?? dua['title']!),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? AppTheme.accent : AppTheme.primary,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       IconButton(
                         icon: Icon(
                           Icons.copy_rounded,
@@ -540,7 +577,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                           HapticFeedback.selectionClick();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('تم نسخ الذكر بنجاح ✨'),
+                              content: Text(isArabic ? 'تم نسخ الذكر بنجاح ✨' : 'Dua copied successfully ✨'),
                               duration: const Duration(seconds: 1),
                               behavior: SnackBarBehavior.floating,
                               shape: RoundedRectangleBorder(
@@ -564,7 +601,7 @@ class _FridayHubWidgetState extends State<FridayHubWidget> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '📌 ${dua['reward']!}',
+                    '📌 ${isArabic ? dua['reward']! : (dua['rewardEn'] ?? dua['reward']!)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: AppTheme.getTextHint(context),
@@ -966,6 +1003,7 @@ class _SurahKahfReaderModal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = AppLocalizations.of(context);
     final isDark = AppTheme.isDark(context);
 
     return DraggableScrollableSheet(
@@ -993,7 +1031,7 @@ class _SurahKahfReaderModal extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'سورة الكهف 📖',
+                    loc.isArabic ? 'سورة الكهف 📖' : 'Surah Al-Kahf 📖',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
@@ -1046,89 +1084,3 @@ class _SurahKahfReaderModal extends StatelessWidget {
   }
 }
 
-// ══════════════════════════════════════════════════
-// Friday Data Repository
-// ══════════════════════════════════════════════════
-
-class FridayData {
-  FridayData._();
-
-  static const String hadithHeader =
-      'قال رسول الله ﷺ: «خَيْرُ يَوْمٍ طَلَعَتْ عَلَيْهِ الشَّمْسُ يَوْمُ الْجُمُعَةِ، فِيهِ خُلِقَ آدَمُ، وَفِيهِ أُدْخِلَ الْجَنَّةَ، وَفِيهِ أُخْرِجَ مِنْهَا»';
-
-  static const List<Map<String, dynamic>> sunan = [
-    {
-      'id': 'ghusl',
-      'title': 'الغُسل والتطيّب',
-      'subtitle': 'التطهر ولبس أحسن الثياب قبل صلاة الجمعة',
-    },
-    {
-      'id': 'siwak',
-      'title': 'استعمال السواك',
-      'subtitle': 'تطهير الفم والتطيب بالسواك سنة مؤكدة',
-    },
-    {
-      'id': 'early',
-      'title': 'التبكير إلى المسجد',
-      'subtitle': 'المشي مبكراً والإنصات للخطبة لنيل الأجر العظيم',
-    },
-    {
-      'id': 'kahf',
-      'title': 'قراءة سورة الكهف',
-      'subtitle': 'نورٌ ما بين الجمعتين لمن قرأها',
-    },
-    {
-      'id': 'salawat',
-      'title': 'الإكثار من الصلاة على النبي',
-      'subtitle': 'تُعرض صلاتنا على رسول الله ﷺ في هذا اليوم المبارك',
-    },
-    {
-      'id': 'dua_hour',
-      'title': 'تحري ساعة الإجابة',
-      'subtitle': 'ساعة لا يوافقها عبد مسلم يدعو إلا استجيب له (آخر ساعة من العصر)',
-    },
-  ];
-
-  static const List<Map<String, String>> azkarAndDuas = [
-    {
-      'title': 'دعاء ساعة الإجابة 🤲',
-      'content': 'اللَّهُمَّ إِنِّي أَسْأَلُكَ مِنَ الخَيْرِ كُلِّهِ عَاجِلِهِ وَآجِلِهِ مَا عَلِمْتُ مِنْهُ وَمَا لَمْ أَعْلَمْ، وَأَعُوذُ بِكَ مِنَ الشَّرِّ كُلِّهِ عَاجِلِهِ وَآجِلِهِ مَا عَلِمْتُ مِنْهُ وَمَا لَمْ أَعْلَمْ.',
-      'reward': 'دعاء جامع لخيري الدنيا والآخرة كان يدعو به النبي ﷺ',
-    },
-    {
-      'title': 'الصيغة الإبراهيمية للصلاة على النبي ✨',
-      'content': 'اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ، كَمَا صَلَّيْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ، اللَّهُمَّ بَارِكْ عَلَى مُحَمَّدٍ وَعَلَى آلِ مُحَمَّدٍ، كَمَا بَارَكْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ.',
-      'reward': 'أفضل وأكمل صيغة للصلاة على النبي ﷺ',
-    },
-    {
-      'title': 'سيد الاستغفار 🌟',
-      'content': 'اللَّهُمَّ أَنْتَ رَبِّي لاَ إِلَهَ إِلاَّ أَنْتَ، خَلَقْتَنِي وَأَنَا عَبْدُكَ، وَأَنَا عَلَى عَهْدِكَ وَوَعْدِكَ مَا اسْتَطَعْتُ، أَعُوذُ بِكَ مِنْ شَرِّ مَا صَنَعْتُ، أَبُوءُ لَكَ بِنِعْمَتِكَ عَلَيَّ، وَأَبُوءُ بِذَنْبِي فَاغْفِرْ لِي فَإِنَّهُ لاَ يَغْفِرُ الذُّنُوبَ إِلاَّ أَنْتَ.',
-      'reward': 'من قالها موقناً بها فمات من يومه أو ليلته دخل الجنة',
-    },
-  ];
-
-  static const List<String> surahKahfVerses = [
-    'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-    'الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا ۜ (1)',
-    'قَيِّمًا لِّيُنذِرَ بَأْسًا شَدِيدًا مِّن لَّدُنْهُ وَيُبَشِّرَ الْمُؤْمِنِينَ الَّذِينَ يَعْمَلُونَ الصَّالِحَاتِ أَنَّ لَهُمْ أَجْرًا حَسَنًا (2)',
-    'مَّاكِثِينَ فِيهِ أَبَدًا (3)',
-    'وَيُنذِرَ الَّذِينَ قَالُوا اتَّخَذَ اللَّهُ وَلَدًا (4)',
-    'مَّا لَهُم بِهِ مِنْ عِلْمٍ وَلَا لِآبَائِهِمْ ۚ كَبُرَتْ كَلِمَةً تَخْرُجُ مِنْ أَفْوَاهِهِمْ ۚ إِن يَقُولُونَ إِلَّا كَذِبًا (5)',
-    'فَلَعَلَّكَ بَاخِعٌ نَّفْسَكَ عَلَىٰ آثَارِهِمْ إِن لَّمْ يُؤْمِنُوا بِهَٰذَا الْحَدِيثِ أَسَفًا (6)',
-    'إِنَّا جَعَلْنَا مَا عَلَى الْأَرْضِ زِينَةً لَّهَا لِنَبْلُوَهُمْ أَيُّهُمْ أَحْسَنُ عَمَلًا (7)',
-    'وَإِنَّا لَجَاعِلُونَ مَا عَلَيْهَا صَعِيدًا جُرُزًا (8)',
-    'أَمْ حَسِبْتَ أَنَّ أَصْحَابَ الْكَهْفِ وَالرَّقِيمِ كَانُوا مِنْ آيَاتِنَا عَجَبًا (9)',
-    'إِذْ أَوَى الْفِتْيَةُ إِلَى الْكَهْفِ فَقَالُوا رَبَّنَا آتِنَا مِن لَّدُنكَ رَحْمَةً وَهَيِّئْ لَنَا مِنْ أَمْرِنَا رَشَدًا (10)',
-    'فَضَرَبْنَا عَلَىٰ آذَانِهِمْ فِي الْكَهْفِ سِنِينَ عَدَدًا (11)',
-    'ثُمَّ بَعَثْنَاهُمْ لِنَعْلَمَ أَيُّ الْحِزْبَيْنِ أَحْصَىٰ لِمَا لَبِثُوا أَمَدًا (12)',
-    'نَّحْنُ نَقُصُّ عَلَيْكَ نَبَأَهُم بِالْحَقِّ ۚ إِنَّهُمْ فِتْيَةٌ آمَنُوا بِرَبِّهِمْ وَزِدْنَاهُمْ هُدًى (13)',
-    'وَرَبَطْنَا عَلَىٰ قُلُوبِهِمْ إِذْ قَامُوا فَقَالُوا رَبُّنَا رَبُّ السَّمَاوَاتِ وَالْأَرْضِ لَن نَّدْعُوَ مِن دُونِهِ إِلَٰهًا ۖ لَّقَدْ قُلْنَا إِذًا شَطَطًا (14)',
-    'هَٰؤُلَاءِ قَوْمُنَا اتَّخَذُوا مِن دُونِهِ آلِهَةً ۖ لَّوْلَا يَأْتُونَ عَلَيْهِم بِسُلْطَانٍ بَيِّنٍ ۖ فَمَنْ أَظْلَمُ مِمَّنِ افْتَرَىٰ عَلَى اللَّهِ كَذِبًا (15)',
-    'وَإِذِ اعْتَزَلْتُمُوهُمْ وَمَا يَعْبُدُونَ إِلَّا اللَّهَ فَأْوُوا إِلَى الْكَهْفِ يَنشُرْ لَكُمْ رَبُّكُم مِّن رَّحْمَتِهِ وَيُهَيِّئْ لَكُم مِّنْ أَمْرِكُم مِّرْفَقًا (16)',
-    'وَتَرَى الشَّمْسَ إِذَا طَلَعَت تَّزَاوَرُ عَن كَهْفِهِمْ ذَاتَ الْيَمِينِ وَإِذَا غَرَبَت تَّقْرِضُهُمْ ذَاتَ الشِّمَالِ وَهُمْ فِي فَجْوَةٍ مِّنْهُ ۚ ذَٰلِكَ مِنْ آيَاتِ اللَّهِ ۗ مَن يَهْدِ اللَّهُ فَهُوَ الْمُهْتَدِ ۖ وَمَن يُضْلِلْ فَلَن تَجِدَ لَهُ وَلِيًّا مُّرْشِدًا (17)',
-    'وَتَحْسَبُهُمْ أَيْقَاظًا وَهُمْ رُقُودٌ ۚ وَنُقَلِّبُهُمْ ذَاتَ الْيَمِينِ وَذَاتَ الشِّمَالِ ۖ وَكَلْبُهُم بَاسِطٌ ذِرَاعَيْهِ بِالْوَصِيدِ ۚ لَوِ اطَّلَعْتَ عَلَيْهِمْ لَوَلَّيْتَ مِنْهُمْ فِرَارًا وَلَمُلِئْتَ مِنْهُم رُعْبًا (18)',
-    'وَكَذَٰلِكَ بَعَثْنَاهُمْ لِيَتَسَاءَلُوا بَيْنَهُمْ ۚ قَالَ قَائِلٌ مِّنْهُمْ كَمْ لَبِثْتُمْ ۖ قَالُوا لَبِثْنَا يَوْمًا أَوْ بَعْضَ يَوْمٍ ۚ قَالُوا رَبُّكُمْ أَعْلَمُ بِمَا لَبِثْتُمْ فَابْعَثُوا أَحَدَكُم بِوَرِقِكُمْ هَٰذِهِ إِلَى الْمَدِينَةِ فَلْيَنظُرْ أَيُّهَا أَزْكَىٰ طَعَامًا فَلْيَأْتِكُم بِرِزْقٍ مِّنْهُ وَلْيَتَلَطَّفْ وَلَا يُشْعِرَنَّ بِكُمْ أَحَدًا (19)',
-    'إِنَّهُمْ إِن يَظْهَرُوا عَلَيْكُمْ يَرْجُمُوكُمْ أَوْ يُعِيدُوكُمْ فِي مِلَّتِهِمْ وَلَن تُفْلِحُوا إِذًا أَبَدًا (20)',
-    'وَقُلِ الْحَمْدُ لِلَّهِ الَّذِي لَمْ يَتَّخِذْ وَلَدًا وَلَمْ يَكُن لَّهُ شَرِيكٌ فِي الْمُلْكِ وَلَمْ يَكُن لَّهُ وَلِيٌّ مِّنَ الذُّلِّ ۖ وَكَبِّرْهُ تَكْبِيرًا ۝ (111)',
-  ];
-}
