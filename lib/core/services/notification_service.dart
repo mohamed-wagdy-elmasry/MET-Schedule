@@ -137,12 +137,12 @@ class NotificationService {
     if (!Platform.isAndroid) return true;
     final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin == null) return true;
+    if (androidPlugin == null) return false;
     try {
       final canExact = await androidPlugin.canScheduleExactNotifications();
-      return canExact ?? true;
+      return canExact ?? false;
     } catch (_) {
-      return true;
+      return false;
     }
   }
 
@@ -187,7 +187,7 @@ class NotificationService {
       );
 
       await _plugin.show(
-        9999,
+        testNotificationId,
         title,
         body,
         const NotificationDetails(android: androidDetails, iOS: iosDetails),
@@ -199,9 +199,39 @@ class NotificationService {
     }
   }
 
+  static const int welcomeNotificationId = 2027;
+  static const int fridayReminderId = 7777;
+  static const int testNotificationId = 9999;
+
+  /// Stable 32-bit FNV-1a hash masked to a positive 31-bit integer.
+  static int fnv1a32(String input) {
+    var hash = 0x811c9dc5;
+    for (var i = 0; i < input.length; i++) {
+      hash ^= input.codeUnitAt(i);
+      hash = (hash * 0x01000193) & 0xFFFFFFFF;
+    }
+    return hash & 0x7FFFFFFF;
+  }
+
+  /// Calculates a stable, deterministic notification ID for a schedule entry.
+  /// IDs are reserved in the range [100000, 2147483647], guaranteeing no collision
+  /// with fixed system notifications (e.g., welcome: 2027, Friday: 7777, test: 9999).
+  static int generateEntryNotificationId(ScheduleEntry entry) {
+    final sortedSections = [...entry.forSections]..sort();
+    final key =
+        '${entry.group}|${entry.day}|${entry.startTime}|${entry.endTime}|${entry.subjectId}|${entry.type}|${sortedSections.join(',')}';
+    final hash = fnv1a32(key);
+    const minId = 100000;
+    const maxSpan = 0x7FFFFFFF - minId;
+    return minId + (hash % maxSpan);
+  }
+
   /// Schedules Friday morning reminder for Surah Al-Kahf and Salawat.
   Future<void> scheduleFridayReminder() async {
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final isAr = (prefs.getString(AppConstants.prefLocale) ?? 'ar') == 'ar';
+
       final now = tz.TZDateTime.now(tz.local);
       var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 9, 0); // 09:00 AM
 
@@ -212,15 +242,18 @@ class NotificationService {
         scheduled = scheduled.add(const Duration(days: 7));
       }
 
-      const androidDetails = AndroidNotificationDetails(
+      final title = isAr ? 'جمعة مباركة 🌸 | سنن يوم الجمعة' : 'Blessed Friday 🌸 | Friday Sunan';
+      final body = isAr
+          ? '📖 قراءة سورة الكهف • 📿 الصلاة على النبي ﷺ • 🤲 تحري ساعة الاستجابة'
+          : '📖 Surah Al-Kahf • 📿 Salawat upon the Prophet ﷺ • 🤲 Seeking Acceptance Hour';
+
+      final androidDetails = AndroidNotificationDetails(
         'met_friday_channel',
         'Friday Reminders',
         channelDescription: 'Reminders for Friday Sunan and Azkar',
         importance: Importance.high,
         priority: Priority.high,
-        styleInformation: BigTextStyleInformation(
-          '📖 قراءة سورة الكهف • 📿 الإكثار من الصلاة على النبي ﷺ • 🤲 تحري ساعة الاستجابة',
-        ),
+        styleInformation: BigTextStyleInformation(body),
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -232,11 +265,11 @@ class NotificationService {
       );
 
       await _plugin.zonedSchedule(
-        7777,
-        'جمعة مباركة 🌸 | سنن يوم الجمعة',
-        '📖 قراءة سورة الكهف • 📿 الصلاة على النبي ﷺ • 🤲 تحري ساعة الاستجابة',
+        fridayReminderId,
+        title,
+        body,
         scheduled,
-        const NotificationDetails(android: androidDetails, iOS: iosDetails),
+        NotificationDetails(android: androidDetails, iOS: iosDetails),
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -257,6 +290,23 @@ class NotificationService {
     }
   }
 
+  /// Calculates the next upcoming occurrence of an entry's notification.
+  tz.TZDateTime _nextOccurrenceForEntry(ScheduleEntry entry) {
+    final (hour, minute) = entry.startTimeParts;
+    var reminderMinute = minute - AppConstants.notificationLeadMinutes;
+    var reminderHour = hour;
+    if (reminderMinute < 0) {
+      reminderMinute += 60;
+      reminderHour -= 1;
+    }
+    if (reminderHour < 0) {
+      reminderHour += 24;
+    }
+
+    final dartWeekday = _dayToWeekday(entry.day) ?? DateTime.saturday;
+    return _nextInstanceOfWeekday(dartWeekday, reminderHour, reminderMinute);
+  }
+
   /// Schedules weekly recurring notifications for every entry in [entries].
   Future<void> scheduleAllNotifications(List<ScheduleEntry> entries) async {
     try {
@@ -274,17 +324,51 @@ class NotificationService {
         return;
       }
 
-      // Cancel all existing before re-scheduling to avoid duplicates.
-      await _plugin.cancelAll();
+      // Cancel previous scheduled notifications to avoid duplicates without dismissing active welcome notification
+      try {
+        final pending = await _plugin.pendingNotificationRequests();
+        for (final req in pending) {
+          if (req.id != welcomeNotificationId) {
+            await _plugin.cancel(req.id);
+          }
+        }
+      } catch (_) {
+        // Fallback only if pending query fails
+      }
 
-      for (var i = 0; i < entries.length; i++) {
-        final entry = entries[i];
-        if (entry.type == 'rest' || entry.type == 'project') continue;
-        await _scheduleWeekly(entry, i);
+      final group = prefs.getString(AppConstants.prefGroup);
+      final section = prefs.getInt(AppConstants.prefSection);
+
+      // Filter entries relevant to the student's group and section, skipping rest/project
+      var filtered = entries.where((e) {
+        if (e.type == 'rest' || e.type == 'project') return false;
+        if (group != null && e.group.isNotEmpty && e.group != group) return false;
+        if (section != null && !e.isRelevantForSection(section)) return false;
+        return true;
+      }).toList();
+
+      // iOS silently drops pending local notifications above 64.
+      // If count exceeds 60, prioritize the soonest upcoming sessions and
+      // keep remaining slots for system notifications (e.g. Friday reminder).
+      if (filtered.length > 60) {
+        debugPrint(
+          '[NotificationService] iOS 64 pending notification limit: truncating ${filtered.length} entries to 60 to prevent silent drops and preserve slots for Friday reminder.',
+        );
+        filtered.sort((a, b) {
+          final timeA = _nextOccurrenceForEntry(a);
+          final timeB = _nextOccurrenceForEntry(b);
+          return timeA.compareTo(timeB);
+        });
+        filtered = filtered.take(60).toList();
+      }
+
+      for (final entry in filtered) {
+        final id = generateEntryNotificationId(entry);
+        await _scheduleWeekly(entry, id);
       }
 
       await scheduleFridayReminder();
-      debugPrint('[NotificationService] Scheduled ${entries.length} weekly notifications + Friday reminder');
+      debugPrint('[NotificationService] Scheduled ${filtered.length} weekly notifications + Friday reminder');
     } catch (e, stack) {
       debugPrint('[NotificationService] Error scheduling notifications: $e\n$stack');
     }
@@ -418,7 +502,7 @@ class NotificationService {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      final ar = isArabic ?? (prefs.getString('selected_locale') ?? 'ar') == 'ar';
+      final ar = isArabic ?? (prefs.getString(AppConstants.prefLocale) ?? 'ar') == 'ar';
 
       final title = ar ? 'Senior 2027 🎓🎉 | مرحباً بك' : 'Senior 2027 🎓🎉 | Welcome!';
       final body = ar
@@ -436,7 +520,13 @@ class NotificationService {
         priority: Priority.high,
         playSound: true,
         enableVibration: true,
-        styleInformation: BigTextStyleInformation(bigText),
+        ticker: 'Senior 2027',
+        visibility: NotificationVisibility.public,
+        styleInformation: BigTextStyleInformation(
+          bigText,
+          contentTitle: title,
+          summaryText: 'MET Senior 2027',
+        ),
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -448,7 +538,7 @@ class NotificationService {
       );
 
       await _plugin.show(
-        2027,
+        welcomeNotificationId,
         title,
         body,
         NotificationDetails(android: androidDetails, iOS: iosDetails),
@@ -464,14 +554,26 @@ class NotificationService {
   /// Automatically displays the Senior 2027 welcome notification on the user's first launch.
   Future<void> checkAndShowSeniorWelcomeOnFirstLaunch([SharedPreferences? prefs]) async {
     final sp = prefs ?? await SharedPreferences.getInstance();
-    const key = 'has_shown_senior_welcome_v2';
+    const key = 'has_shown_senior_welcome_v4';
     final alreadyShown = sp.getBool(key) ?? false;
     if (alreadyShown) return;
 
-    final isAr = (sp.getString('selected_locale') ?? 'ar') == 'ar';
+    // Smooth delay to allow initial UI transition and Android notification service warmup
+    await Future.delayed(const Duration(milliseconds: 1000));
+
+    final isAr = (sp.getString(AppConstants.prefLocale) ?? 'ar') == 'ar';
     final sent = await showSeniorWelcomeNotification(isArabic: isAr);
     if (sent) {
       await sp.setBool(key, true);
     }
+  }
+
+  /// Resets the welcome notification flag so it can be re-triggered for testing.
+  Future<void> resetSeniorWelcomeFlag([SharedPreferences? prefs]) async {
+    final sp = prefs ?? await SharedPreferences.getInstance();
+    await sp.remove('has_shown_senior_welcome_v4');
+    await sp.remove('has_shown_senior_welcome_v3');
+    await sp.remove('has_shown_senior_welcome_v2');
+    await sp.remove('has_shown_senior_welcome');
   }
 }

@@ -93,6 +93,9 @@ class FridayData {
     },
   ];
 
+  /// Surah Al-Kahf (Quran Chapter 18, Verses 1-110).
+  /// Source / Text Attribution: Public domain Quranic Uthmani text (Hafs 'an 'Asim recitation).
+  /// Sourced for offline Friday reading and devotional practice.
   static const List<String> surahKahfVerses = [
     'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
     'الْحَمْدُ لِلَّهِ الَّذِي أَنزَلَ عَلَىٰ عَبْدِهِ الْكِتَابَ وَلَمْ يَجْعَل لَّهُ عِوَجًا ﴿١﴾',

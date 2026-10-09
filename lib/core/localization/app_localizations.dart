@@ -28,6 +28,8 @@ class AppLocalizations {
   String get next => _t('Next', 'التالي');
   String get back => _t('Back', 'رجوع');
   String get done => _t('Done', 'تم');
+  String get retry => _t('Retry', 'إعادة المحاولة');
+  String get loadError => _t('Failed to load schedule', 'فشل تحميل الجدول');
   String get settings => _t('Settings', 'الإعدادات');
   String get language => _t('Language', 'اللغة');
   String get arabic => _t('Arabic', 'العربية');
@@ -53,6 +55,14 @@ class AppLocalizations {
   String get sectionLabel => _t('Section', 'السكشن');
   String get getStarted => _t('Get Started', 'ابدأ الآن');
   String get letsGo => _t("Let's Go!", 'هيا بنا!');
+  String get appGuide => _t('In-App Guided Tour', 'جولة توضيحية داخل التطبيق');
+  String get appGuideSubtitle => _t(
+    'Interactive walkthrough of all app sections',
+    'شرح تفاعلي مباشر لكل سكشن وخاصية داخل التطبيق',
+  );
+  String get skip => _t('Skip', 'تخطي');
+  String get previous => _t('Previous', 'السابق');
+  String get gotIt => _t("Got it! Let's start", 'فهمت! ابدأ الآن');
 
   // ── Navigation ──
   String get today => _t('Today', 'اليوم');
@@ -150,6 +160,7 @@ class AppLocalizations {
   String get currentSection => _t('Current Section', 'السكشن الحالي');
   String get changePreferences => _t('Change', 'تغيير');
   String get about => _t('About', 'حول التطبيق');
+  String get privacyPolicy => _t('Privacy Policy', 'سياسة الخصوصية');
   String get version => _t('Version', 'الإصدار');
   String get madeWith => _t(
     'Developed & Crafted by El-Forma ❤️',

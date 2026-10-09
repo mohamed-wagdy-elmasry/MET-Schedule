@@ -15,6 +15,7 @@ import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'data/datasources/local_schedule_datasource.dart';
 import 'data/repositories/schedule_repository_impl.dart';
+import 'domain/repositories/schedule_repository.dart';
 import 'presentation/bloc/preferences_cubit.dart';
 import 'presentation/bloc/schedule_cubit.dart';
 import 'presentation/screens/home_screen.dart';
@@ -46,20 +47,59 @@ Future<void> main() async {
   runApp(METApp(prefs: prefs));
 }
 
-class METApp extends StatelessWidget {
+class METApp extends StatefulWidget {
   final SharedPreferences prefs;
-  const METApp({super.key, required this.prefs});
+  final ScheduleRepository? scheduleRepository;
+  final PreferencesCubit? preferencesCubit;
+  final ScheduleCubit? scheduleCubit;
+
+  const METApp({
+    super.key,
+    required this.prefs,
+    this.scheduleRepository,
+    this.preferencesCubit,
+    this.scheduleCubit,
+  });
+
+  @override
+  State<METApp> createState() => _METAppState();
+}
+
+class _METAppState extends State<METApp> {
+  late final ScheduleRepository _scheduleRepository;
+  late final PreferencesCubit _preferencesCubit;
+  late final ScheduleCubit _scheduleCubit;
+  late final bool _ownsPreferencesCubit;
+  late final bool _ownsScheduleCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleRepository = widget.scheduleRepository ??
+        ScheduleRepositoryImpl(LocalScheduleDataSource());
+    _ownsPreferencesCubit = widget.preferencesCubit == null;
+    _ownsScheduleCubit = widget.scheduleCubit == null;
+    _preferencesCubit = widget.preferencesCubit ?? PreferencesCubit(widget.prefs);
+    _scheduleCubit = widget.scheduleCubit ?? ScheduleCubit(_scheduleRepository);
+  }
+
+  @override
+  void dispose() {
+    if (_ownsPreferencesCubit) {
+      _preferencesCubit.close();
+    }
+    if (_ownsScheduleCubit) {
+      _scheduleCubit.close();
+    }
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Dependency setup
-    final dataSource = LocalScheduleDataSource();
-    final repository = ScheduleRepositoryImpl(dataSource);
-
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => PreferencesCubit(prefs)),
-        BlocProvider(create: (_) => ScheduleCubit(repository)),
+        BlocProvider.value(value: _preferencesCubit),
+        BlocProvider.value(value: _scheduleCubit),
       ],
       child: BlocBuilder<PreferencesCubit, PreferencesState>(
         builder: (context, prefsState) {
@@ -88,14 +128,20 @@ class METApp extends StatelessWidget {
                 GlobalCupertinoLocalizations.delegate,
               ],
 
+              // ── Global Smooth Momentum Scrolling ──
+              scrollBehavior: const MaterialScrollBehavior().copyWith(
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                overscroll: false,
+              ),
+
               // ── Clamp text scaling to prevent UI overflow
-              //    with large accessibility font sizes ──
+              //    with large accessibility font sizes (0.8 - 1.4) ──
               builder: (context, child) {
                 return MediaQuery(
                   data: MediaQuery.of(context).copyWith(
                     textScaler: MediaQuery.of(context).textScaler.clamp(
                       minScaleFactor: 0.8,
-                      maxScaleFactor: 1.15,
+                      maxScaleFactor: 1.4,
                     ),
                   ),
                   child: child!,

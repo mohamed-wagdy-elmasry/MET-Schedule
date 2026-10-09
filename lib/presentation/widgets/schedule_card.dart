@@ -224,23 +224,30 @@ class ScheduleCard extends StatelessWidget {
                     const SizedBox(width: 8),
 
                     // Quick Edit Button ALWAYS anchored at the far trailing corner
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => EditSessionModal.show(context, entry: entry),
-                      child: Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: isDark ? 0.16 : 0.09),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: color.withValues(alpha: isDark ? 0.35 : 0.25),
-                            width: 1,
+                    Semantics(
+                      button: true,
+                      label: isArabic ? 'تعديل المحاضرة' : 'Edit session',
+                      child: Tooltip(
+                        message: isArabic ? 'تعديل المحاضرة' : 'Edit session',
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => EditSessionModal.show(context, entry: entry),
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: color.withValues(alpha: isDark ? 0.16 : 0.09),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: color.withValues(alpha: isDark ? 0.35 : 0.25),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.edit_rounded,
+                              size: 14,
+                              color: color,
+                            ),
                           ),
-                        ),
-                        child: Icon(
-                          Icons.edit_rounded,
-                          size: 14,
-                          color: color,
                         ),
                       ),
                     ),
@@ -618,19 +625,27 @@ class _NextClassCardState extends State<NextClassCard> with WidgetsBindingObserv
               children: [
                 const Icon(Icons.bolt_rounded, size: 15, color: Colors.white),
                 const SizedBox(width: 5),
-                Text(
-                  isArabic ? '⚡ موعدك القادم في الجدول الدراسي' : '⚡ Next On Your Academic Timetable',
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.3,
-                    color: Colors.white,
+                Flexible(
+                  child: Text(
+                    isArabic ? '⚡ موعدك القادم في الجدول الدراسي' : '⚡ Next On Your Academic Timetable',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.3,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          Row(
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 8,
+            runSpacing: 8,
             children: [
               // Live status indicator badge
               Container(
@@ -671,75 +686,86 @@ class _NextClassCardState extends State<NextClassCard> with WidgetsBindingObserv
                   ],
                 ),
               ),
-              const Spacer(),
-              // Glowing Countdown Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: diffMinutes <= 10 && isSameDay
-                        ? [
-                            AppTheme.error.withValues(alpha: isDark ? 0.28 : 0.18),
-                            AppTheme.error.withValues(alpha: isDark ? 0.14 : 0.08),
-                          ]
-                        : [
-                            heroAmber.withValues(alpha: isDark ? 0.25 : 0.14),
-                            heroOrange.withValues(alpha: isDark ? 0.14 : 0.08),
-                          ],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: (diffMinutes <= 10 && isSameDay ? AppTheme.error : heroAmber)
-                        .withValues(alpha: isDark ? 0.6 : 0.4),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.schedule_rounded,
-                      size: 14,
-                      color: diffMinutes <= 10 && isSameDay
-                          ? AppTheme.error
-                          : (isDark ? heroAmber : heroAmberDark),
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      diffMinutes <= 0
-                          ? (isArabic ? 'الآن' : 'Now')
-                          : '$dayPrefix${loc.startsIn} $timeLabel',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                        color: diffMinutes <= 10 && isSameDay
-                            ? AppTheme.error
-                            : (isDark ? heroAmber : heroAmberDark),
+              // Glowing Countdown Badge + Quick Edit Button
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: diffMinutes <= 10 && isSameDay
+                            ? [
+                                AppTheme.error.withValues(alpha: isDark ? 0.28 : 0.18),
+                                AppTheme.error.withValues(alpha: isDark ? 0.14 : 0.08),
+                              ]
+                            : [
+                                heroAmber.withValues(alpha: isDark ? 0.25 : 0.14),
+                                heroOrange.withValues(alpha: isDark ? 0.14 : 0.08),
+                              ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: (diffMinutes <= 10 && isSameDay ? AppTheme.error : heroAmber)
+                            .withValues(alpha: isDark ? 0.6 : 0.4),
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Quick edit button (pen icon only) — anchored at the far trailing corner
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => EditSessionModal.show(context, entry: entry),
-                child: Container(
-                  padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: heroAmber.withValues(alpha: isDark ? 0.20 : 0.10),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: heroAmber.withValues(alpha: isDark ? 0.4 : 0.3),
-                      width: 1,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.schedule_rounded,
+                          size: 14,
+                          color: diffMinutes <= 10 && isSameDay
+                              ? AppTheme.error
+                              : (isDark ? heroAmber : heroAmberDark),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          diffMinutes <= 0
+                              ? (isArabic ? 'الآن' : 'Now')
+                              : '$dayPrefix${loc.startsIn} $timeLabel',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            color: diffMinutes <= 10 && isSameDay
+                                ? AppTheme.error
+                                : (isDark ? heroAmber : heroAmberDark),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Icon(
-                    Icons.edit_rounded,
-                    size: 14,
-                    color: isDark ? heroAmber : heroAmberDark,
+                  const SizedBox(width: 8),
+                  // Quick edit button (pen icon only) — anchored next to countdown
+                  Semantics(
+                    button: true,
+                    label: isArabic ? 'تعديل المحاضرة' : 'Edit session',
+                    child: Tooltip(
+                      message: isArabic ? 'تعديل المحاضرة' : 'Edit session',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => EditSessionModal.show(context, entry: entry),
+                        child: Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: heroAmber.withValues(alpha: isDark ? 0.20 : 0.10),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: heroAmber.withValues(alpha: isDark ? 0.4 : 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.edit_rounded,
+                            size: 14,
+                            color: isDark ? heroAmber : heroAmberDark,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),

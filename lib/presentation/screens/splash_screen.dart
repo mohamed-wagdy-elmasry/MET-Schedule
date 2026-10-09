@@ -49,13 +49,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     _animController.forward();
 
-    // Trigger schedule load early & check for Senior 2027 welcome notification (returning users)
+    // Trigger schedule load early & check for Senior 2027 welcome notification on app open
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final prefs = context.read<PreferencesCubit>().state;
       if (prefs.hasOnboarded) {
         context.read<ScheduleCubit>().loadSchedule(prefs.group, prefs.section);
-        NotificationService.instance.checkAndShowSeniorWelcomeOnFirstLaunch().ignore();
       }
+      NotificationService.instance.checkAndShowSeniorWelcomeOnFirstLaunch().ignore();
     });
 
     // Navigate to next screen after pleasant 2.0 second welcome

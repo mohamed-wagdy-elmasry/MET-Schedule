@@ -188,8 +188,9 @@ class AppTheme {
           return labColor;
         case 'section':
           return sectionColor;
-        case 'rest':
         case 'project':
+          return projectColor;
+        case 'rest':
           return restColor;
         default:
           return primary;
@@ -202,8 +203,9 @@ class AppTheme {
           return labColorLight;
         case 'section':
           return sectionColorLight;
-        case 'rest':
         case 'project':
+          return projectColorLight;
+        case 'rest':
           return restColorLight;
         default:
           return primary;

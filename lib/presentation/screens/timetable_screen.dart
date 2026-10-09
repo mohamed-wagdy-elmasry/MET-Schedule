@@ -15,6 +15,8 @@ import '../bloc/preferences_cubit.dart';
 import '../widgets/friday_hub_widget.dart';
 import '../widgets/schedule_card.dart';
 import '../widgets/edit_session_modal.dart';
+import '../widgets/feature_tour_overlay.dart';
+import 'home_screen.dart';
 
 class TimetableScreen extends StatelessWidget {
   const TimetableScreen({super.key});
@@ -26,6 +28,58 @@ class TimetableScreen extends StatelessWidget {
         if (state.isLoading) {
           return const Center(
             child: CircularProgressIndicator(color: AppTheme.primary),
+          );
+        }
+
+        if (state.errorMessage != null && state.errorMessage!.isNotEmpty) {
+          final loc = AppLocalizations.of(context);
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded, size: 64, color: AppTheme.error),
+                  const SizedBox(height: 16),
+                  Text(
+                    loc.loadError,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.getTextPrimary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.errorMessage!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppTheme.getTextSecondary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      final prefs = context.read<PreferencesCubit>().state;
+                      context.read<ScheduleCubit>().loadSchedule(prefs.group, prefs.section);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: Text(
+                      loc.retry,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
@@ -64,14 +118,20 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
     _timer?.cancel();
     // Live timer ticking every 60 seconds to refresh time-based state smoothly
     _timer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        context.read<ScheduleCubit>().refreshNextClass();
+        setState(() {});
+      }
     });
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      if (mounted) setState(() {});
+      if (mounted) {
+        context.read<ScheduleCubit>().refreshNextClass();
+        setState(() {});
+      }
       _startTimer();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _timer?.cancel();
@@ -90,11 +150,9 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
     final now = DateTime.now();
     final nowMinutes = now.hour * 60 + now.minute;
 
+    // Determine the latest scheduled end time across all sessions today (including project/rest)
     int maxEndMinutes = 0;
-    bool hasAcademicSessions = false;
     for (final entry in entries) {
-      if (entry.type == 'rest' || entry.type == 'project') continue;
-      hasAcademicSessions = true;
       final (h, m) = entry.endTimeParts;
       final endMinutes = h * 60 + m;
       if (endMinutes > maxEndMinutes) {
@@ -102,7 +160,17 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
       }
     }
 
-    return hasAcademicSessions && nowMinutes >= maxEndMinutes;
+    // If today's latest session has ended
+    if (maxEndMinutes > 0 && nowMinutes >= maxEndMinutes) {
+      return true;
+    }
+
+    // After 5:00 PM (17:00), academic college day is definitively finished
+    if (nowMinutes >= 17 * 60) {
+      return true;
+    }
+
+    return false;
   }
 
   @override
@@ -111,10 +179,28 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
     final loc = AppLocalizations.of(context);
     final prefs = context.watch<PreferencesCubit>().state;
     final isDark = AppTheme.isDark(context);
-    final isDayFinished = _isSchoolDayFinished(state.todayEntries);
+
+    // If guided tour is active, show an active full academic day preview (e.g. Saturday) so all elements are present
+    final isTour = HomeScreen.isTourActive;
+    final effectiveDay = isTour && (state.isFriday || state.todayEntries.isEmpty)
+        ? 'saturday'
+        : state.currentDay;
+    final effectiveTodayEntries = isTour && (state.isFriday || state.todayEntries.isEmpty)
+        ? (state.weekEntries['saturday'] ?? state.todayEntries)
+        : state.todayEntries;
+    final effectiveNextClass = isTour && (state.nextClass == null || state.isFriday) && effectiveTodayEntries.isNotEmpty
+        ? effectiveTodayEntries.firstWhere(
+            (e) => e.type != 'rest' && e.type != 'project',
+            orElse: () => effectiveTodayEntries.first,
+          )
+        : state.nextClass;
+    final effectiveNextClassDay = isTour && (state.nextClass == null || state.isFriday)
+        ? 'saturday'
+        : state.nextClassDay;
+    final isDayFinished = isTour ? false : _isSchoolDayFinished(effectiveTodayEntries);
 
     // ── Dedicated Friday View ──
-    if (state.isFriday) {
+    if (state.isFriday && !isTour) {
       return CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -164,11 +250,14 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
             ),
           ),
           SliverToBoxAdapter(
-            child: FridayHubWidget(
-              upcomingSaturdayEntries: state.weekEntries['saturday'] ?? [],
-              onPreviewSaturday: () {
-                context.read<ScheduleCubit>().selectWeekDay(0);
-              },
+            child: KeyedSubtree(
+              key: AppTourKeys.fridayHubKey,
+              child: FridayHubWidget(
+                upcomingSaturdayEntries: state.weekEntries['saturday'] ?? [],
+                onPreviewSaturday: () {
+                  context.read<ScheduleCubit>().selectWeekDay(0);
+                },
+              ),
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -178,6 +267,7 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
 
     // ── Regular Academic Day View ──
     return CustomScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       slivers: [
         // Header
         SliverToBoxAdapter(
@@ -203,7 +293,7 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          _dayDisplayLabel(state.currentDay, loc),
+                          _dayDisplayLabel(effectiveDay, loc),
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
@@ -213,46 +303,49 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
                       ],
                     ),
                     // High-tech Add Lecture Button
-                    GestureDetector(
-                      onTap: () => EditSessionModal.show(
-                        context,
-                        initialDay: state.currentDay,
-                        initialGroup: prefs.group,
-                      ),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              AppTheme.primary,
-                              isDark ? AppTheme.primaryLight : AppTheme.primaryDark,
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.35),
-                              blurRadius: 10,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
+                    KeyedSubtree(
+                      key: AppTourKeys.addLectureKey,
+                      child: GestureDetector(
+                        onTap: () => EditSessionModal.show(
+                          context,
+                          initialDay: effectiveDay,
+                          initialGroup: prefs.group,
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.add_rounded, size: 16, color: Colors.white),
-                            const SizedBox(width: 4),
-                            Text(
-                              loc.isArabic ? 'إضافة محاضرة' : 'Add Lecture',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                AppTheme.primary,
+                                isDark ? AppTheme.primaryLight : AppTheme.primaryDark,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
                             ),
-                          ],
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primary.withValues(alpha: 0.35),
+                                blurRadius: 10,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                              const SizedBox(width: 4),
+                              Text(
+                                loc.isArabic ? 'إضافة محاضرة' : 'Add Lecture',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -476,13 +569,16 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
             ),
           )
         else ...[
-          // Smart Next Class Hero (only shown if the next class is TODAY)
-          if (state.nextClass != null && state.nextClassDay == state.currentDay) ...[
+          // Smart Next Class Hero (only shown if the next class is TODAY or in Tour preview)
+          if (effectiveNextClass != null && (effectiveNextClassDay == effectiveDay || isTour)) ...[
             SliverToBoxAdapter(
-              child: NextClassCard(
-                entry: state.nextClass!,
-                currentDay: state.currentDay,
-                targetDay: state.nextClassDay,
+              child: KeyedSubtree(
+                key: AppTourKeys.nextClassCardKey,
+                child: NextClassCard(
+                  entry: effectiveNextClass,
+                  currentDay: effectiveDay,
+                  targetDay: effectiveNextClassDay ?? effectiveDay,
+                ),
               ),
             ),
             // Distinct Separator between Next Class Hero and Daily Schedule List
@@ -665,14 +761,20 @@ class _TodayViewState extends State<_TodayView> with WidgetsBindingObserver {
             SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) {
-                  final entry = state.todayEntries[index];
-                  return ScheduleCard(
+                  final entry = effectiveTodayEntries[index];
+                  final card = ScheduleCard(
                     entry: entry,
                     isHighlighted: !entry.isForAllSections,
                     preferences: prefs,
                   );
+                  return index == 0
+                      ? KeyedSubtree(
+                          key: AppTourKeys.scheduleListKey,
+                          child: card,
+                        )
+                      : card;
                 },
-                childCount: state.todayEntries.length,
+                childCount: effectiveTodayEntries.length,
               ),
             ),
         ],
@@ -742,121 +844,126 @@ class _WeekViewState extends State<_WeekView> {
     return Column(
       children: [
         // Day Selector (Pills)
-        Container(
-          height: 52,
-          margin: const EdgeInsets.only(top: 8, bottom: 4),
-          child: ListView.separated(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            scrollDirection: Axis.horizontal,
-            itemCount: AppConstants.daysEn.length,
-            separatorBuilder: (context, index) => const SizedBox(width: 8),
-            itemBuilder: (context, i) {
-              final dayKey = AppConstants.daysEn[i];
-              final entries = widget.state.weekEntries[dayKey] ?? [];
-              final label = loc.isArabic
-                  ? AppConstants.daysArDisplay[i]
-                  : AppConstants.daysEnDisplay[i];
-              final isSelected = i == _selectedDayIdx;
-              final isToday = dayKey == widget.state.currentDay;
+        KeyedSubtree(
+          key: AppTourKeys.weekDaySelectorKey,
+          child: Container(
+            height: 52,
+            margin: const EdgeInsets.only(top: 8, bottom: 4),
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: AppConstants.daysEn.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, i) {
+                final dayKey = AppConstants.daysEn[i];
+                final entries = widget.state.weekEntries[dayKey] ?? [];
+                final label = loc.isArabic
+                    ? AppConstants.daysArDisplay[i]
+                    : AppConstants.daysEnDisplay[i];
+                final isSelected = i == _selectedDayIdx;
+                final isToday = dayKey == widget.state.currentDay;
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() => _selectedDayIdx = i);
-                  _pageController.animateToPage(
-                    i,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOutCubic,
-                  );
-                },
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: isSelected
-                        ? const LinearGradient(
-                            colors: [AppTheme.primary, AppTheme.primaryDark],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
-                    color: isSelected
-                        ? null
-                        : (isDark ? AppTheme.bgCard.withValues(alpha: 0.6) : Colors.white),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
+                return GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedDayIdx = i);
+                    _pageController.animateToPage(
+                      i,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOutCubic,
+                    );
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: isSelected
+                          ? const LinearGradient(
+                              colors: [AppTheme.primary, AppTheme.primaryDark],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
+                          : null,
                       color: isSelected
-                          ? (isDark ? AppTheme.accent.withValues(alpha: 0.4) : AppTheme.primary)
-                          : (isToday
-                              ? AppTheme.primary.withValues(alpha: isDark ? 0.3 : 0.5)
-                              : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0))),
-                      width: isSelected || isToday ? 1.5 : 1,
-                    ),
-                    boxShadow: isSelected
-                        ? [
-                            BoxShadow(
-                              color: AppTheme.primary.withValues(alpha: 0.35),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : (isDark
-                            ? []
-                            : [
-                                BoxShadow(
-                                  color: const Color(0xFF64748B).withValues(alpha: 0.06),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                          color: isSelected
-                              ? Colors.white
-                              : (isToday
-                                  ? (isDark ? AppTheme.accent : AppTheme.primary)
-                                  : AppTheme.getTextSecondary(context)),
-                        ),
+                          ? null
+                          : (isDark ? AppTheme.bgCard.withValues(alpha: 0.6) : Colors.white),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isSelected
+                            ? (isDark ? AppTheme.accent.withValues(alpha: 0.4) : AppTheme.primary)
+                            : (isToday
+                                ? AppTheme.primary.withValues(alpha: isDark ? 0.3 : 0.5)
+                                : (isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFE2E8F0))),
+                        width: isSelected || isToday ? 1.5 : 1,
                       ),
-                      if (entries.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: AppTheme.primary.withValues(alpha: 0.35),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ]
+                          : (isDark
+                              ? []
+                              : [
+                                  BoxShadow(
+                                    color: const Color(0xFF64748B).withValues(alpha: 0.06),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                             color: isSelected
-                                ? Colors.white.withValues(alpha: 0.25)
-                                : AppTheme.primary.withValues(alpha: isDark ? 0.15 : 0.12),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            '${entries.length}',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              color: isSelected
-                                  ? Colors.white
-                                  : (isDark ? AppTheme.accent : AppTheme.primary),
-                            ),
+                                ? Colors.white
+                                : (isToday
+                                    ? (isDark ? AppTheme.accent : AppTheme.primary)
+                                    : AppTheme.getTextSecondary(context)),
                           ),
                         ),
+                        if (entries.isNotEmpty) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? Colors.white.withValues(alpha: 0.25)
+                                  : AppTheme.primary.withValues(alpha: isDark ? 0.15 : 0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${entries.length}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                color: isSelected
+                                    ? Colors.white
+                                    : (isDark ? AppTheme.accent : AppTheme.primary),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
 
         // Tab Content
         Expanded(
-          child: PageView.builder(
+          child: KeyedSubtree(
+            key: AppTourKeys.weekScheduleListKey,
+            child: PageView.builder(
             controller: _pageController,
             onPageChanged: (idx) {
               setState(() => _selectedDayIdx = idx);
@@ -917,6 +1024,7 @@ class _WeekViewState extends State<_WeekView> {
               }
 
               return ListView.builder(
+                physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 itemCount: entries.length + 1,
                 itemBuilder: (context, index) {
@@ -949,8 +1057,9 @@ class _WeekViewState extends State<_WeekView> {
             },
           ),
         ),
-      ],
-    );
+      ),
+    ],
+  );
   }
 }
 
@@ -1022,14 +1131,16 @@ class _InfoPill extends StatelessWidget {
           Icon(icon, size: 15, color: color),
           const SizedBox(width: 5),
           Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                color: color,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                ),
               ),
             ),
           ),

@@ -56,15 +56,10 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
@@ -83,11 +78,5 @@
 		<string>mailto</string>
 		<string>whatsapp</string>
 	</array>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>يحتاج تطبيق MET Schedule للوصول إلى مكتبة الصور لاختيار الخرائط والمستندات الدراسية. / Requires photo library access to select campus maps and study documents.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>يحتاج تطبيق MET Schedule لاستخدام الكاميرا لتصوير الجداول والمستندات الدراسية. / Requires camera access to capture schedule and study documents.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>يحتاج تطبيق MET Schedule لحفظ الجداول والخرائط في مكتبة الصور. / Requires permission to save schedules and campus maps to your photo library.</string>
 </dict>
 </plist>

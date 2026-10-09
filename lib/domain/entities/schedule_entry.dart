@@ -60,13 +60,21 @@ class ScheduleEntry extends Equatable {
   /// Returns the location display name based on locale.
   String locationName(bool isArabic) => isArabic ? locationNameAr : locationNameEn;
 
-  /// Returns the instructor display name based on locale.
+  /// Returns the instructor display name based on locale (stripped of any invalid digits).
   String instructorName(bool isArabic) {
-    if (instructors.isNotEmpty) return instructors.join(' / ');
-    return isArabic ? instructorNameAr : instructorNameEn;
+    if (instructors.isNotEmpty) {
+      final cleanedList = instructors
+          .map((i) => i.replaceAll(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]'), '').trim())
+          .where((i) => i.isNotEmpty)
+          .toList();
+      if (cleanedList.isNotEmpty) return cleanedList.join(' / ');
+    }
+    final name = isArabic ? instructorNameAr : instructorNameEn;
+    return name.replaceAll(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]'), '').trim();
   }
 
-  /// Parses instructor data (string with separators or list) into a list of names.
+  /// Parses instructor data (string with separators or list) into a list of names,
+  /// removing any numbers in Arabic or English digits.
   static List<String> parseInstructors(dynamic raw) {
     if (raw == null) return const [];
     final List<String> rawStrings = [];
@@ -83,9 +91,9 @@ class ScheduleEntry extends Equatable {
     for (final str in rawStrings) {
       final parts = str.split(regex);
       for (final part in parts) {
-        final trimmed = part.trim();
-        if (trimmed.isNotEmpty) {
-          result.add(trimmed);
+        final cleaned = part.replaceAll(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]'), '').trim();
+        if (cleaned.isNotEmpty && cleaned.replaceAll(RegExp(r'[^a-zA-Z\u0621-\u064A]'), '').isNotEmpty) {
+          result.add(cleaned);
         }
       }
     }
@@ -121,6 +129,9 @@ class ScheduleEntry extends Equatable {
     if (isAM && hour == 12) hour = 0;
     return (hour, minute);
   }
+
+  /// Parses a time string into 24-hour (hour, minute).
+  static (int hour, int minute) parseTime(String timeStr) => _parseTime(timeStr);
 
   /// Formats a time string (e.g. "09:00 AM") for the current locale ("09:00 ص" or "09:00 AM").
   static String formatSingleTime(String timeStr, bool isArabic) {

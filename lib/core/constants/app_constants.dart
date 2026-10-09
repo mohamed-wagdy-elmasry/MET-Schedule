@@ -9,7 +9,9 @@ class AppConstants {
   // ── App Info ──
   static const String appNameEn = 'MET Schedule';
   static const String appNameAr = 'جدول MET';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.0'; // Fallback if runtime package info is unavailable
+  static const String privacyPolicyUrl =
+      'https://mohamed-wagdy-elmasry.github.io/MET-Schedule/privacy/';
 
   // ── SharedPreferences Keys ──
   static const String prefGroup = 'student_group';

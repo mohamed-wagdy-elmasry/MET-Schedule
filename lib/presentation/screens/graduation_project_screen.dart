@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/localization/app_localizations.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/datasources/project_workspace_service.dart';
+import '../widgets/feature_tour_overlay.dart';
 
 class GraduationProjectScreen extends StatefulWidget {
   const GraduationProjectScreen({super.key});
@@ -119,8 +120,10 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     final progress = _data.progressPercentage;
     final progressPercent = (progress * 100).toInt();
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+    return KeyedSubtree(
+      key: AppTourKeys.gradProjectKey,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark
@@ -299,6 +302,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
           ),
         ],
       ),
+    ),
     );
   }
 
@@ -1265,6 +1269,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
       backgroundColor: AppTheme.getCardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1274,35 +1281,64 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
           left: 20,
           right: 20,
-          top: 20,
+          top: 16,
         ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+              // Interactive drag handle
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: (details) {
+                  if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                onVerticalDragEnd: (details) {
+                  if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                loc.isArabic
-                    ? '✏️ تعديل بيانات مشروع التخرج'
-                    : '✏️ Edit Project Details',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.getTextPrimary(context),
-                ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      loc.isArabic
+                          ? '✏️ تعديل بيانات مشروع التخرج'
+                          : '✏️ Edit Project Details',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextPrimary(context),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: loc.isArabic ? 'إغلاق' : 'Close',
+                    icon: Icon(Icons.close_rounded, color: AppTheme.getTextSecondary(context), size: 24),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               TextField(
                 controller: nameCtrl,
                 style: const TextStyle(fontSize: 15),
@@ -1332,6 +1368,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                   Expanded(
                     child: TextField(
                       controller: docCtrl,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]')),
+                      ],
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
                         labelText: loc.isArabic
@@ -1345,6 +1384,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
                   Expanded(
                     child: TextField(
                       controller: taCtrl,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.deny(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]')),
+                      ],
                       style: const TextStyle(fontSize: 14),
                       decoration: InputDecoration(
                         labelText: loc.isArabic
@@ -1417,6 +1459,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
       backgroundColor: AppTheme.getCardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1427,36 +1472,65 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
             left: 20,
             right: 20,
-            top: 20,
+            top: 16,
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppTheme.getTextHint(context)
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
+                // Interactive drag handle
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppTheme.getTextHint(context)
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  loc.isArabic
-                      ? '🔗 إضافة رابط جديد للمشروع'
-                      : '🔗 Add Project Resource',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.getTextPrimary(context),
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        loc.isArabic
+                            ? '🔗 إضافة رابط جديد للمشروع'
+                            : '🔗 Add Project Resource',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.getTextPrimary(context),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: loc.isArabic ? 'إغلاق' : 'Close',
+                      icon: Icon(Icons.close_rounded, color: AppTheme.getTextSecondary(context), size: 24),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 14),
                 TextField(
                   controller: titleCtrl,
                   style: const TextStyle(fontSize: 15),
@@ -1555,6 +1629,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
       backgroundColor: AppTheme.getCardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1564,37 +1641,69 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
           left: 20,
           right: 20,
-          top: 20,
+          top: 16,
         ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+              // Interactive drag handle
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: (details) {
+                  if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                onVerticalDragEnd: (details) {
+                  if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                loc.isArabic
-                    ? '👥 إضافة عضو في فريق المشروع'
-                    : '👥 Add Team Member',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.getTextPrimary(context),
-                ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      loc.isArabic
+                          ? '👥 إضافة عضو في فريق المشروع'
+                          : '👥 Add Team Member',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextPrimary(context),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: loc.isArabic ? 'إغلاق' : 'Close',
+                    icon: Icon(Icons.close_rounded, color: AppTheme.getTextSecondary(context), size: 24),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               TextField(
                 controller: nameCtrl,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]')),
+                ],
                 style: const TextStyle(fontSize: 15),
                 decoration: InputDecoration(
                   labelText: loc.isArabic ? 'اسم الزميل' : 'Member Name',
@@ -1678,6 +1787,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
       backgroundColor: AppTheme.getCardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1687,37 +1799,69 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
           bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
           left: 20,
           right: 20,
-          top: 20,
+          top: 16,
         ),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(2),
+              // Interactive drag handle
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onVerticalDragUpdate: (details) {
+                  if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                onVerticalDragEnd: (details) {
+                  if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                    Navigator.of(ctx).pop();
+                  }
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Center(
+                    child: Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              Text(
-                loc.isArabic
-                    ? '✏️ تعديل بيانات العضو'
-                    : '✏️ Edit Member',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.getTextPrimary(context),
-                ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      loc.isArabic
+                          ? '✏️ تعديل بيانات العضو'
+                          : '✏️ Edit Member',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.getTextPrimary(context),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: loc.isArabic ? 'إغلاق' : 'Close',
+                    icon: Icon(Icons.close_rounded, color: AppTheme.getTextSecondary(context), size: 24),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 14),
               TextField(
                 controller: nameCtrl,
+                inputFormatters: [
+                  FilteringTextInputFormatter.deny(RegExp(r'[0-9\u0660-\u0669\u06F0-\u06F9]')),
+                ],
                 style: const TextStyle(fontSize: 15),
                 decoration: InputDecoration(
                   labelText: loc.isArabic ? 'الاسم' : 'Name',
@@ -1792,6 +1936,9 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
       backgroundColor: AppTheme.getCardBg(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
@@ -1802,34 +1949,63 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
             left: 20,
             right: 20,
-            top: 20,
+            top: 16,
           ),
           child: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Center(
-                  child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppTheme.getTextHint(context)
-                          .withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
+                // Interactive drag handle
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                      Navigator.of(ctx).pop();
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppTheme.getTextHint(context)
+                              .withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  loc.isArabic
-                      ? '📋 إضافة مهمة جديدة'
-                      : '📋 Add New Task',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.getTextPrimary(context),
-                  ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        loc.isArabic
+                            ? '📋 إضافة مهمة جديدة'
+                            : '📋 Add New Task',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: AppTheme.getTextPrimary(context),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: loc.isArabic ? 'إغلاق' : 'Close',
+                      icon: Icon(Icons.close_rounded, color: AppTheme.getTextSecondary(context), size: 24),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 18),
                 TextField(
@@ -1953,6 +2129,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
     }
 
     return NestedScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       headerSliverBuilder: (context, innerBoxIsScrolled) {
         return [
           // Project Card (Scrolls with page)
@@ -1965,6 +2142,7 @@ class _GraduationProjectScreenState extends State<GraduationProjectScreen>
             pinned: true,
             delegate: _SliverTabBarDelegate(
               child: Container(
+                key: AppTourKeys.gradProjectTabsKey,
                 color: isDark ? AppTheme.bgDark : const Color(0xFFF8FAFC),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 child: Container(

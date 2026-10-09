@@ -163,4 +163,25 @@ void main() {
     expect(parseInstructors(''), equals([]));
     expect(parseInstructors(null), equals([]));
   });
+
+  test('Verify sections list semantics in schedule.json (non-all entries have sections)', () async {
+    final file = File('assets/data/schedule.json');
+    final content = await file.readAsString();
+    final List<dynamic> data = json.decode(content);
+
+    for (final item in data) {
+      final type = (item['type'] as String?)?.trim().toLowerCase() ?? '';
+      final sections = (item['sections'] as List<dynamic>?) ?? [];
+      final subject = item['subject'] ?? '';
+
+      // Non-"all" sessions (sections and labs) must have non-empty section targets.
+      if (type == 'section' || type == 'lab') {
+        expect(
+          sections.isNotEmpty,
+          isTrue,
+          reason: 'Entry "$subject" of type "$type" has empty sections list in schedule.json.',
+        );
+      }
+    }
+  });
 }

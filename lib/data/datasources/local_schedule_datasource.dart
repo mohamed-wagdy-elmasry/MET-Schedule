@@ -1,4 +1,4 @@
-/// Local data source — parses `schedule.json` or `bis_schedule.json` from assets into domain entities.
+/// Local data source — parses `schedule.json` from assets into domain entities.
 ///
 /// Decoupled from presentation: this is the single place that understands the JSON shape.
 library;
@@ -43,12 +43,7 @@ class LocalScheduleDataSource {
     }
 
     // 2. Load from bundled asset
-    String jsonStr;
-    try {
-      jsonStr = await rootBundle.loadString(AppConstants.scheduleAssetPath);
-    } catch (_) {
-      jsonStr = await rootBundle.loadString('assets/data/bis_schedule.json');
-    }
+    final jsonStr = await rootBundle.loadString(AppConstants.scheduleAssetPath);
 
     final dynamic decoded = json.decode(jsonStr);
     final entries = <ScheduleEntry>[];
@@ -121,6 +116,9 @@ class LocalScheduleDataSource {
         .map((e) => int.tryParse(e.toString()) ?? 0)
         .where((s) => s > 0)
         .toList();
+    // Intended semantics: Lectures, rest, and project sessions inherently apply to all
+    // sections in the group. For sections and labs, an explicit list of sections is expected;
+    // however, an empty `sections` array is treated as "all sections" (e.g. whole-group cohort sessions).
     final bool isForAll = type == 'lecture' || type == 'rest' || type == 'project' || forSections.isEmpty;
 
     final subject = (item['subject'] as String?) ??

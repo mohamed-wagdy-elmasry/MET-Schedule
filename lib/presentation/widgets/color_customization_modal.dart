@@ -9,17 +9,30 @@ import '../../core/theme/app_theme.dart';
 import '../bloc/preferences_cubit.dart';
 
 class ColorCustomizationModal extends StatelessWidget {
-  const ColorCustomizationModal({super.key});
+  final ScrollController? scrollController;
+  const ColorCustomizationModal({super.key, this.scrollController});
 
   static void show(BuildContext context) {
+    final prefsCubit = context.read<PreferencesCubit>();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppTheme.getCardBg(context),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      enableDrag: true,
+      isDismissible: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider<PreferencesCubit>.value(
+        value: prefsCubit,
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.88,
+          minChildSize: 0.35,
+          maxChildSize: 0.96,
+          expand: false,
+          builder: (sheetContext, scrollController) => ColorCustomizationModal(
+            scrollController: scrollController,
+          ),
+        ),
       ),
-      builder: (_) => const ColorCustomizationModal(),
     );
   }
 
@@ -33,223 +46,278 @@ class ColorCustomizationModal extends StatelessWidget {
       builder: (context, prefs) {
         final currentPrimary = prefs.primaryColorValue;
 
-        return SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.only(
-              left: 20,
-              right: 20,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.getCardBg(context),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Handle bar
-                Center(
+                // Handle bar (interactive drag-to-dismiss)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                      Navigator.of(context).pop();
+                    }
+                  },
                   child: Container(
-                    width: 44,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppTheme.getTextHint(context).withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Title
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.palette_rounded, color: AppTheme.primary, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      isArabic ? 'تخصيص ألوان التطبيق' : 'Customize Colors',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.getTextPrimary(context),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // ── Section 1: Main App Theme Accent ──
-                Text(
-                  isArabic ? 'اللون الأساسي للتطبيق' : 'Main Theme Accent',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.getTextPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isArabic
-                      ? 'اختر مظهرك المفضل من بين ألوان عصرية مصممة للطلاب'
-                      : 'Choose your favorite palette curated for students',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.getTextHint(context),
-                  ),
-                ),
-                const SizedBox(height: 12),
-
-                // Palette grid
-                GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 2.8,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                  ),
-                  itemCount: AppPalettes.list.length,
-                  itemBuilder: (context, index) {
-                    final pal = AppPalettes.list[index];
-                    final isSelected = pal.primary.toARGB32() == currentPrimary;
-
-                    return GestureDetector(
-                      onTap: () {
-                        context.read<PreferencesCubit>().setPrimaryColor(pal.primary.toARGB32());
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    width: double.infinity,
+                    padding: const EdgeInsets.only(top: 12, bottom: 8),
+                    child: Center(
+                      child: Container(
+                        width: 44,
+                        height: 4.5,
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? pal.primary.withValues(alpha: isDark ? 0.25 : 0.15)
-                              : (isDark ? AppTheme.bgCardLight : const Color(0xFFF8FAFC)),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isSelected ? pal.primary : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
-                            width: isSelected ? 2 : 1,
+                          color: AppTheme.getTextHint(context).withValues(alpha: 0.35),
+                          borderRadius: BorderRadius.circular(3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Title Row with Close Button (Also draggable)
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (details) {
+                    if (details.primaryDelta != null && details.primaryDelta! > 10) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  onVerticalDragEnd: (details) {
+                    if (details.primaryVelocity != null && details.primaryVelocity! > 50) {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primary.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.palette_rounded, color: AppTheme.primary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isArabic ? 'تخصيص ألوان التطبيق' : 'Customize Colors',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.getTextPrimary(context),
+                            ),
                           ),
                         ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 22,
-                              height: 22,
-                              decoration: BoxDecoration(
-                                color: pal.primary,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: pal.primary.withValues(alpha: 0.4),
-                                    blurRadius: 6,
+                        IconButton(
+                          tooltip: isArabic ? 'إغلاق' : 'Close',
+                          icon: Icon(Icons.close_rounded, color: AppTheme.getTextSecondary(context), size: 24),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Divider(height: 1, color: AppTheme.getBorder(context)),
+
+                // Scrollable Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.only(
+                      left: 20,
+                      right: 20,
+                      top: 16,
+                      bottom: MediaQuery.of(context).viewInsets.bottom + 28,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // ── Section 1: Main App Theme Accent ──
+                        Text(
+                          isArabic ? 'اللون الأساسي للتطبيق' : 'Main Theme Accent',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.getTextPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isArabic
+                              ? 'اختر مظهرك المفضل من بين ألوان عصرية مصممة للطلاب'
+                              : 'Choose your favorite palette curated for students',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.getTextHint(context),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Palette grid
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            childAspectRatio: 2.8,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                          ),
+                          itemCount: AppPalettes.list.length,
+                          itemBuilder: (context, index) {
+                            final pal = AppPalettes.list[index];
+                            final isSelected = pal.primary.toARGB32() == currentPrimary;
+
+                            return GestureDetector(
+                              onTap: () {
+                                context.read<PreferencesCubit>().setPrimaryColor(pal.primary.toARGB32());
+                              },
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? pal.primary.withValues(alpha: isDark ? 0.25 : 0.15)
+                                      : (isDark ? AppTheme.bgCardLight : const Color(0xFFF8FAFC)),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSelected ? pal.primary : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0)),
+                                    width: isSelected ? 2 : 1,
                                   ),
-                                ],
-                              ),
-                              child: isSelected
-                                  ? const Icon(Icons.check, size: 14, color: Colors.white)
-                                  : null,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                isArabic ? pal.nameAr : pal.nameEn,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                  color: isSelected ? pal.primary : AppTheme.getTextPrimary(context),
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 22,
+                                      height: 22,
+                                      decoration: BoxDecoration(
+                                        color: pal.primary,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: pal.primary.withValues(alpha: 0.4),
+                                            blurRadius: 6,
+                                          ),
+                                        ],
+                                      ),
+                                      child: isSelected
+                                          ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                          : null,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        isArabic ? pal.nameAr : pal.nameEn,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                          color: isSelected ? pal.primary : AppTheme.getTextPrimary(context),
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 24),
+                        Divider(color: AppTheme.getBorder(context)),
+                        const SizedBox(height: 16),
+
+                        // ── Section 2: Session Type Colors ──
+                        Text(
+                          isArabic ? 'ألوان المحاضرات والسكاشن والمعامل' : 'Lecture & Section Colors',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.getTextPrimary(context),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          isArabic
+                              ? 'حدد اللون المميز لكل نوع محاضرة أو سكشن في جدولك'
+                              : 'Assign distinct colors for lectures, sections, labs & rest',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.getTextHint(context),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        _SessionColorPickerRow(
+                          label: isArabic ? 'المحاضرات 🎓' : 'Lectures 🎓',
+                          typeKey: 'lecture',
+                          currentColor: AppTheme.sessionColor('lecture', isDark, prefs.customSessionColors),
+                          onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('lecture', c.toARGB32()),
+                        ),
+                        const SizedBox(height: 10),
+
+                        _SessionColorPickerRow(
+                          label: isArabic ? 'السكاشن ✏️' : 'Sections ✏️',
+                          typeKey: 'section',
+                          currentColor: AppTheme.sessionColor('section', isDark, prefs.customSessionColors),
+                          onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('section', c.toARGB32()),
+                        ),
+                        const SizedBox(height: 10),
+
+                        _SessionColorPickerRow(
+                          label: isArabic ? 'العملي والمعامل 💻' : 'Labs 💻',
+                          typeKey: 'lab',
+                          currentColor: AppTheme.sessionColor('lab', isDark, prefs.customSessionColors),
+                          onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('lab', c.toARGB32()),
+                        ),
+                        const SizedBox(height: 10),
+
+                        _SessionColorPickerRow(
+                          label: isArabic ? 'الراحة ومشاريع التخرج ☕' : 'REST / Projects ☕',
+                          typeKey: 'rest',
+                          currentColor: AppTheme.sessionColor('rest', isDark, prefs.customSessionColors),
+                          onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('rest', c.toARGB32()),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Reset Colors Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              context.read<PreferencesCubit>().resetColors();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(isArabic ? 'تمت استعادة الألوان الافتراضية بنجاح' : 'Colors restored to defaults'),
+                                  duration: const Duration(seconds: 2),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.refresh_rounded, size: 16),
+                            label: Text(isArabic ? 'استعادة الألوان الافتراضية' : 'Reset Colors to Default'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.getTextSecondary(context),
+                              side: BorderSide(color: AppTheme.getBorder(context)),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
                             ),
-                          ],
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 24),
-                Divider(color: AppTheme.getBorder(context)),
-                const SizedBox(height: 16),
-
-                // ── Section 2: Session Type Colors ──
-                Text(
-                  isArabic ? 'ألوان المحاضرات والسكاشن والمعامل' : 'Lecture & Section Colors',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.getTextPrimary(context),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  isArabic
-                      ? 'حدد اللون المميز لكل نوع محاضرة أو سكشن في جدولك'
-                      : 'Assign distinct colors for lectures, sections, labs & rest',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.getTextHint(context),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                _SessionColorPickerRow(
-                  label: isArabic ? 'المحاضرات 🎓' : 'Lectures 🎓',
-                  typeKey: 'lecture',
-                  currentColor: AppTheme.sessionColor('lecture', isDark, prefs.customSessionColors),
-                  onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('lecture', c.toARGB32()),
-                ),
-                const SizedBox(height: 10),
-
-                _SessionColorPickerRow(
-                  label: isArabic ? 'السكاشن ✏️' : 'Sections ✏️',
-                  typeKey: 'section',
-                  currentColor: AppTheme.sessionColor('section', isDark, prefs.customSessionColors),
-                  onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('section', c.toARGB32()),
-                ),
-                const SizedBox(height: 10),
-
-                _SessionColorPickerRow(
-                  label: isArabic ? 'العملي والمعامل 💻' : 'Labs 💻',
-                  typeKey: 'lab',
-                  currentColor: AppTheme.sessionColor('lab', isDark, prefs.customSessionColors),
-                  onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('lab', c.toARGB32()),
-                ),
-                const SizedBox(height: 10),
-
-                _SessionColorPickerRow(
-                  label: isArabic ? 'الراحة ومشاريع التخرج ☕' : 'REST / Projects ☕',
-                  typeKey: 'rest',
-                  currentColor: AppTheme.sessionColor('rest', isDark, prefs.customSessionColors),
-                  onSelect: (c) => context.read<PreferencesCubit>().setSessionColor('rest', c.toARGB32()),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Reset Colors Button
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      context.read<PreferencesCubit>().resetColors();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(isArabic ? 'تمت استعادة الألوان الافتراضية بنجاح' : 'Colors restored to defaults'),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.refresh_rounded, size: 16),
-                    label: Text(isArabic ? 'استعادة الألوان الافتراضية' : 'Reset Colors to Default'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.getTextSecondary(context),
-                      side: BorderSide(color: AppTheme.getBorder(context)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      ],
                     ),
                   ),
                 ),

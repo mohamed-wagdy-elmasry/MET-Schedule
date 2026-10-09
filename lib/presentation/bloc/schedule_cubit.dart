@@ -150,6 +150,33 @@ class ScheduleCubit extends Cubit<ScheduleState> {
     emit(state.copyWith(viewMode: mode));
   }
 
+  /// Start Tour Preview mode: emits an active full academic day (Saturday) with next class and schedule entries
+  void startTourPreview() {
+    final saturdayEntries = state.weekEntries['saturday'] ?? [];
+    ScheduleEntry? sampleNextClass;
+    if (saturdayEntries.isNotEmpty) {
+      sampleNextClass = saturdayEntries.firstWhere(
+        (e) => e.type != 'rest' && e.type != 'project',
+        orElse: () => saturdayEntries.first,
+      );
+    }
+
+    emit(state.copyWith(
+      viewMode: ScheduleViewMode.today,
+      currentDay: 'saturday',
+      todayEntries: saturdayEntries,
+      nextClass: sampleNextClass,
+      nextClassDay: 'saturday',
+      selectedWeekDayIndex: 0,
+      clearNextClass: sampleNextClass == null,
+    ));
+  }
+
+  /// End Tour Preview mode: restores current real day schedule
+  Future<void> endTourPreview() async {
+    await loadSchedule(state.group, state.section);
+  }
+
   /// Switch to Week view and select a specific day.
   void selectWeekDay(int index) {
     emit(state.copyWith(
