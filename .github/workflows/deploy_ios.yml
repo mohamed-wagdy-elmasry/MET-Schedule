@@ -1,0 +1,90 @@
+name: Deploy iOS to TestFlight
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Custom build number (optional, defaults to automatic increment >= 7)'
+        required: false
+        type: string
+        default: ''
+
+concurrency:
+  group: ios-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy_ios:
+    name: Build & Upload to TestFlight
+    runs-on: macos-14
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.3'
+          channel: 'stable'
+          cache: true
+
+      - name: Calculate Build Number
+        id: build_calc
+        run: |
+          if [ -n "${{ github.event.inputs.build_number }}" ]; then
+            CALCULATED_BUILD="${{ github.event.inputs.build_number }}"
+            echo "Using manual build number: $CALCULATED_BUILD"
+          else
+            # Ensure build number is strictly greater than previously uploaded builds (minimum 7)
+            CALCULATED_BUILD=$(( 6 + ${{ github.run_number }} ))
+            echo "Auto-calculated build number (6 + run_number): $CALCULATED_BUILD"
+          fi
+          echo "BUILD_NUMBER=$CALCULATED_BUILD" >> $GITHUB_ENV
+          echo "build_number=$CALCULATED_BUILD" >> $GITHUB_OUTPUT
+
+      - name: Install Flutter Dependencies
+        run: flutter pub get
+
+      - name: Analyze Project Code
+        run: flutter analyze --fatal-infos
+
+      - name: Run Flutter Tests
+        run: flutter test
+
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+
+      - name: Build Flutter iOS Bundle (No CodeSign)
+        run: |
+          flutter build ios --release --no-codesign --build-number=${{ env.BUILD_NUMBER }}
+
+      - name: Sign & Upload to TestFlight with Fastlane
+        env:
+          APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
+          APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
+          APP_STORE_API_KEY: ${{ secrets.APP_STORE_API_KEY }}
+          BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
+        run: |
+          cd ios
+          bundle exec fastlane ios beta
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: met-schedule-v1.0.0-b${{ env.BUILD_NUMBER }}.ipa
+          path: ios/build/ios/ipa/*.ipa
+          retention-days: 14

@@ -1,0 +1,72 @@
+require 'fileutils'
+require 'base64'
+
+default_platform(:ios)
+
+platform :ios do
+  desc "Build iOS application and upload to TestFlight via App Store Connect API Key"
+  lane :beta do |options|
+    key_id = ENV["APP_STORE_KEY_ID"]
+    issuer_id = ENV["APP_STORE_ISSUER_ID"]
+    key_content = ENV["APP_STORE_API_KEY"]
+
+    UI.user_error!("Missing APP_STORE_KEY_ID environment variable") if key_id.to_s.strip.empty?
+    UI.user_error!("Missing APP_STORE_ISSUER_ID environment variable") if issuer_id.to_s.strip.empty?
+    UI.user_error!("Missing APP_STORE_API_KEY environment variable") if key_content.to_s.strip.empty?
+
+    # Detect if API key is Base64 encoded or raw PEM
+    is_b64 = !key_content.include?("BEGIN PRIVATE KEY")
+    raw_pem = is_b64 ? Base64.decode64(key_content) : key_content
+
+    # Save AuthKey file to standard Apple private keys path for xcodebuild
+    key_dir = File.expand_path("~/.appstoreconnect/private_keys")
+    FileUtils.mkdir_p(key_dir)
+    key_path = File.join(key_dir, "AuthKey_#{key_id}.p8")
+    File.write(key_path, raw_pem)
+    File.chmod(0600, key_path)
+    UI.message("Saved App Store Connect API Key to #{key_path}")
+
+    # Initialize Fastlane App Store Connect API Key
+    api_key = app_store_connect_api_key(
+      key_id: key_id,
+      issuer_id: issuer_id,
+      key_content: raw_pem,
+      is_key_content_base64: false,
+      in_house: false
+    )
+
+    # Configure CI temporary keychain if running in CI environment
+    setup_ci if is_ci
+
+    # Fetch / manage App Store provisioning profile using App Store Connect API
+    get_provisioning_profile(
+      api_key: api_key,
+      app_identifier: "com.met.bisschedule",
+      team_id: "5P3YPGQD6T"
+    )
+
+    # Build iOS archive and export signed IPA
+    build_app(
+      workspace: "Runner.xcworkspace",
+      scheme: "Runner",
+      clean: true,
+      export_method: "app-store",
+      output_directory: "./build/ios/ipa",
+      output_name: "met_schedule.ipa",
+      export_options: {
+        method: "app-store",
+        teamID: "5P3YPGQD6T",
+        signingStyle: "automatic",
+        manageAppVersionAndBuildNumber: false
+      },
+      xcargs: "-allowProvisioningUpdates -authenticationKeyIssuerID #{issuer_id} -authenticationKeyID #{key_id} -authenticationKeyPath #{key_path}"
+    )
+
+    # Upload generated IPA to TestFlight
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      skip_submission: true
+    )
+  end
+end
