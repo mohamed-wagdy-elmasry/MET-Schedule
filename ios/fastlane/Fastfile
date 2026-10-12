@@ -42,8 +42,21 @@ platform :ios do
       in_house:                false
     )
 
-    # Setup ephemeral CI keychain
-    setup_ci if is_ci
+    # Create and unlock a dedicated CI keychain to prevent macOS password popups
+    keychain_name     = "ci_keychain"
+    keychain_password = "ci_password_123"
+    keychain_path     = File.expand_path("~/Library/Keychains/#{keychain_name}-db")
+
+    if is_ci
+      create_keychain(
+        name:             keychain_name,
+        password:         keychain_password,
+        default_keychain: true,
+        unlock:           true,
+        timeout:          3600,
+        lock_when_sleeps: false
+      )
+    end
 
     # ── Step 1: Distribution Certificate ──────────────────────────────────
     if ENV["BUILD_CERTIFICATE_BASE64"] && !ENV["BUILD_CERTIFICATE_BASE64"].strip.empty?
@@ -53,31 +66,45 @@ platform :ios do
       import_certificate(
         certificate_path:     p12_path,
         certificate_password: ENV["P12_PASSWORD"] || "",
-        keychain_name:        is_ci ? "fastlane_tmp_keychain" : nil
+        keychain_name:        is_ci ? keychain_name : nil,
+        keychain_password:    is_ci ? keychain_password : nil
       )
     else
-      UI.message("Fetching/creating Apple Distribution certificate via API Key…")
+      # Check and free a slot if 2 distribution certs exist on Apple Developer
       begin
-        get_certificates(
-          api_key:     api_key,
-          development: false,         # Distribution certificate only
-          generate_apple_certs: true  # Create new cert if none exists
-        )
+        dist_certs = Spaceship::ConnectAPI::Certificate.all.select do |c|
+          c.certificate_type.to_s.include?("DISTRIBUTION")
+        end
+        UI.message("Found #{dist_certs.count} Distribution certificate(s) on Apple Developer Portal")
+        if dist_certs.count >= 2
+          cert_to_revoke = dist_certs.sort_by(&:id).last
+          UI.important("Revoking orphaned cert #{cert_to_revoke.id} to ensure an active slot for CI…")
+          Spaceship::ConnectAPI.client.delete("certificates/#{cert_to_revoke.id}")
+          UI.success("Revoked #{cert_to_revoke.id}. Slot is ready.")
+        end
       rescue => e
-        UI.important("get_certificates note: #{e.message}. Continuing with cloud signing.")
+        UI.important("Certificate cleanup note: #{e.message}")
       end
+
+      UI.message("Fetching/creating Apple Distribution certificate via API Key…")
+      get_certificates(
+        api_key:               api_key,
+        development:           false,
+        generate_apple_certs:  true,
+        keychain_path:         is_ci ? keychain_path : nil,
+        keychain_password:     is_ci ? keychain_password : nil
+      )
     end
 
     # ── Step 2: App Store Provisioning Profile ─────────────────────────────
     UI.message("Fetching/regenerating App Store provisioning profile…")
     get_provisioning_profile(
-      api_key:                      api_key,
-      app_identifier:               APP_IDENTIFIER,
-      team_id:                      TEAM_ID,
-      provisioning_name:            "MET Schedule AppStore",
+      api_key:                             api_key,
+      app_identifier:                      APP_IDENTIFIER,
+      team_id:                             TEAM_ID,
+      provisioning_name:                   "MET Schedule AppStore",
       ignore_profiles_with_different_name: false,
-      force:                        true,  # Regenerate to ensure profile includes the new certificate
-      readonly:                     false
+      force:                               true
     )
 
     profile_path = lane_context[SharedValues::SIGH_PROFILE_PATH]
