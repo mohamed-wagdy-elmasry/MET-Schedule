@@ -76,6 +76,8 @@ jobs:
           APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
           APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
           APP_STORE_API_KEY: ${{ secrets.APP_STORE_API_KEY }}
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 || '' }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD || '' }}
           BUILD_NUMBER: ${{ env.BUILD_NUMBER }}
         run: |
           cd ios

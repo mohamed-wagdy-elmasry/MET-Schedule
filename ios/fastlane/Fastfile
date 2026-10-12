@@ -26,6 +26,13 @@ platform :ios do
     File.chmod(0600, key_path)
     UI.message("Saved App Store Connect API Key to #{key_path}")
 
+    # Mirror to ~/private_keys/
+    home_key_dir = File.expand_path("~/private_keys")
+    FileUtils.mkdir_p(home_key_dir)
+    home_key_path = File.join(home_key_dir, "AuthKey_#{key_id}.p8")
+    File.write(home_key_path, raw_pem)
+    File.chmod(0600, home_key_path)
+
     # Initialize Fastlane App Store Connect API Key
     api_key = app_store_connect_api_key(
       key_id: key_id,
@@ -38,14 +45,38 @@ platform :ios do
     # Configure CI temporary keychain if running in CI environment
     setup_ci if is_ci
 
-    # Fetch / manage App Store provisioning profile using App Store Connect API
+    # 1. Check if user provided an existing .p12 certificate in secrets
+    if ENV["BUILD_CERTIFICATE_BASE64"] && !ENV["BUILD_CERTIFICATE_BASE64"].strip.empty?
+      UI.message("Importing provided .p12 distribution certificate...")
+      p12_path = File.expand_path("~/dist_cert.p12")
+      File.write(p12_path, Base64.decode64(ENV["BUILD_CERTIFICATE_BASE64"].strip))
+      import_certificate(
+        certificate_path: p12_path,
+        certificate_password: ENV["P12_PASSWORD"] || "",
+        keychain_name: is_ci ? "fastlane_tmp_keychain" : nil
+      )
+    else
+      # 2. Automatically generate and install a new distribution certificate & private key via Fastlane cert
+      UI.message("Attempting to fetch or create Apple Distribution certificate via API Key...")
+      begin
+        get_certificates(
+          api_key: api_key,
+          development: false
+        )
+      rescue => e
+        UI.important("Certificate step note: #{e.message}. Proceeding to profile and cloud signing.")
+      end
+    end
+
+    # 3. Fetch / manage App Store provisioning profile using App Store Connect API
     get_provisioning_profile(
       api_key: api_key,
       app_identifier: "com.met.bisschedule",
-      team_id: "5P3YPGQD6T"
+      team_id: "5P3YPGQD6T",
+      skip_certificate_verification: true
     )
 
-    # Build iOS archive and export signed IPA
+    # 4. Build iOS archive and export signed IPA
     build_app(
       workspace: "Runner.xcworkspace",
       scheme: "Runner",
@@ -56,13 +87,12 @@ platform :ios do
       export_options: {
         method: "app-store",
         teamID: "5P3YPGQD6T",
-        signingStyle: "automatic",
-        manageAppVersionAndBuildNumber: false
+        signingStyle: "automatic"
       },
       xcargs: "-allowProvisioningUpdates -authenticationKeyIssuerID #{issuer_id} -authenticationKeyID #{key_id} -authenticationKeyPath #{key_path}"
     )
 
-    # Upload generated IPA to TestFlight
+    # 5. Upload generated IPA to TestFlight
     upload_to_testflight(
       api_key: api_key,
       skip_waiting_for_build_processing: true,
