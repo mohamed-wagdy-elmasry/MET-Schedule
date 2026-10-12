@@ -1,5 +1,7 @@
 require 'fileutils'
 require 'base64'
+require 'net/http'
+require 'uri'
 
 default_platform(:ios)
 
@@ -78,9 +80,20 @@ platform :ios do
         UI.message("Found #{dist_certs.count} Distribution certificate(s) on Apple Developer Portal")
         if dist_certs.count >= 2
           cert_to_revoke = dist_certs.sort_by(&:id).last
-          UI.important("Revoking orphaned cert #{cert_to_revoke.id} to ensure an active slot for CI…")
-          Spaceship::ConnectAPI.client.delete("certificates/#{cert_to_revoke.id}")
-          UI.success("Revoked #{cert_to_revoke.id}. Slot is ready.")
+          UI.important("Revoking orphaned cert #{cert_to_revoke.id} via App Store Connect API DELETE…")
+          token_str = Spaceship::ConnectAPI.token.text
+          uri = URI("https://api.appstoreconnect.apple.com/v1/certificates/#{cert_to_revoke.id}")
+          http = Net::HTTP.new(uri.host, uri.port)
+          http.use_ssl = true
+          del_req = Net::HTTP::Delete.new(uri.request_uri)
+          del_req["Authorization"] = "Bearer #{token_str}"
+          del_res = http.request(del_req)
+          UI.message("App Store Connect DELETE returned status #{del_res.code}")
+          if del_res.code.to_i == 204 || del_res.code.to_i == 200
+            UI.success("Successfully revoked #{cert_to_revoke.id}. Slot is free now!")
+          else
+            UI.important("Revocation response: #{del_res.body}")
+          end
         end
       rescue => e
         UI.important("Certificate cleanup note: #{e.message}")
