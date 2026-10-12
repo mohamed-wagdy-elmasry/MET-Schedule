@@ -3,100 +3,130 @@ require 'base64'
 
 default_platform(:ios)
 
+APP_IDENTIFIER = "com.met.bisschedule"
+TEAM_ID        = "5P3YPGQD6T"
+
 platform :ios do
-  desc "Build iOS application and upload to TestFlight via App Store Connect API Key"
+  desc "Build iOS application and upload to TestFlight via App Store Connect API Key (Manual Signing)"
   lane :beta do |options|
-    key_id = ENV["APP_STORE_KEY_ID"]
-    issuer_id = ENV["APP_STORE_ISSUER_ID"]
-    key_content = ENV["APP_STORE_API_KEY"]
+    key_id     = ENV["APP_STORE_KEY_ID"].to_s.strip
+    issuer_id  = ENV["APP_STORE_ISSUER_ID"].to_s.strip
+    key_content = ENV["APP_STORE_API_KEY"].to_s.strip
 
-    UI.user_error!("Missing APP_STORE_KEY_ID environment variable") if key_id.to_s.strip.empty?
-    UI.user_error!("Missing APP_STORE_ISSUER_ID environment variable") if issuer_id.to_s.strip.empty?
-    UI.user_error!("Missing APP_STORE_API_KEY environment variable") if key_content.to_s.strip.empty?
+    UI.user_error!("Missing APP_STORE_KEY_ID")    if key_id.empty?
+    UI.user_error!("Missing APP_STORE_ISSUER_ID") if issuer_id.empty?
+    UI.user_error!("Missing APP_STORE_API_KEY")   if key_content.empty?
 
-    # Detect if API key is Base64 encoded or raw PEM
-    is_b64 = !key_content.include?("BEGIN PRIVATE KEY")
+    # Decode API key (may be raw PEM or Base64)
+    is_b64  = !key_content.include?("BEGIN PRIVATE KEY") && !key_content.include?("BEGIN EC PRIVATE KEY")
     raw_pem = is_b64 ? Base64.decode64(key_content) : key_content
 
-    # Save AuthKey file to standard Apple private keys path for xcodebuild
-    key_dir = File.expand_path("~/.appstoreconnect/private_keys")
+    # Save .p8 key for xcodebuild
+    key_dir  = File.expand_path("~/.appstoreconnect/private_keys")
     FileUtils.mkdir_p(key_dir)
     key_path = File.join(key_dir, "AuthKey_#{key_id}.p8")
     File.write(key_path, raw_pem)
     File.chmod(0600, key_path)
-    UI.message("Saved App Store Connect API Key to #{key_path}")
 
-    # Mirror to ~/private_keys/
+    # Mirror to ~/private_keys/ (fallback search path)
     home_key_dir = File.expand_path("~/private_keys")
     FileUtils.mkdir_p(home_key_dir)
-    home_key_path = File.join(home_key_dir, "AuthKey_#{key_id}.p8")
-    File.write(home_key_path, raw_pem)
-    File.chmod(0600, home_key_path)
+    File.write(File.join(home_key_dir, "AuthKey_#{key_id}.p8"), raw_pem)
 
-    # Initialize Fastlane App Store Connect API Key
+    # Initialize App Store Connect API Key for Fastlane actions
     api_key = app_store_connect_api_key(
-      key_id: key_id,
-      issuer_id: issuer_id,
-      key_content: raw_pem,
-      is_key_content_base64: false,
-      in_house: false
+      key_id:                  key_id,
+      issuer_id:               issuer_id,
+      key_content:             raw_pem,
+      is_key_content_base64:   false,
+      in_house:                false
     )
 
-    # Configure CI temporary keychain if running in CI environment
+    # Setup ephemeral CI keychain
     setup_ci if is_ci
 
-    # 1. Check if user provided an existing .p12 certificate in secrets
+    # ── Step 1: Distribution Certificate ──────────────────────────────────
     if ENV["BUILD_CERTIFICATE_BASE64"] && !ENV["BUILD_CERTIFICATE_BASE64"].strip.empty?
-      UI.message("Importing provided .p12 distribution certificate...")
+      UI.message("Importing provided .p12 distribution certificate…")
       p12_path = File.expand_path("~/dist_cert.p12")
       File.write(p12_path, Base64.decode64(ENV["BUILD_CERTIFICATE_BASE64"].strip))
       import_certificate(
-        certificate_path: p12_path,
+        certificate_path:     p12_path,
         certificate_password: ENV["P12_PASSWORD"] || "",
-        keychain_name: is_ci ? "fastlane_tmp_keychain" : nil
+        keychain_name:        is_ci ? "fastlane_tmp_keychain" : nil
       )
     else
-      # 2. Automatically generate and install a new distribution certificate & private key via Fastlane cert
-      UI.message("Attempting to fetch or create Apple Distribution certificate via API Key...")
+      UI.message("Fetching/creating Apple Distribution certificate via API Key…")
       begin
         get_certificates(
-          api_key: api_key,
-          development: false
+          api_key:     api_key,
+          development: false,         # Distribution certificate only
+          generate_apple_certs: true  # Create new cert if none exists
         )
       rescue => e
-        UI.important("Certificate step note: #{e.message}. Proceeding to profile and cloud signing.")
+        UI.important("get_certificates note: #{e.message}. Continuing with cloud signing.")
       end
     end
 
-    # 3. Fetch / manage App Store provisioning profile using App Store Connect API
+    # ── Step 2: App Store Provisioning Profile ─────────────────────────────
+    UI.message("Fetching App Store provisioning profile…")
     get_provisioning_profile(
-      api_key: api_key,
-      app_identifier: "com.met.bisschedule",
-      team_id: "5P3YPGQD6T",
-      skip_certificate_verification: true
+      api_key:                      api_key,
+      app_identifier:               APP_IDENTIFIER,
+      team_id:                      TEAM_ID,
+      provisioning_name:            "MET Schedule AppStore",
+      ignore_profiles_with_different_name: false,
+      skip_certificate_verification: true,
+      readonly:                     false  # Create if missing
     )
 
-    # 4. Build iOS archive and export signed IPA
+    profile_path = lane_context[SharedValues::SIGH_PROFILE_PATH]
+    profile_uuid = lane_context[SharedValues::SIGH_UUID]
+    UI.message("Profile path : #{profile_path}")
+    UI.message("Profile UUID : #{profile_uuid}")
+
+    # ── Step 3: Update Xcode project to Manual signing with the fetched profile
+    UI.message("Updating Xcode project code signing settings to Manual…")
+    update_code_signing_settings(
+      use_automatic_signing: false,
+      path:                  "Runner.xcodeproj",
+      team_id:               TEAM_ID,
+      bundle_identifier:     APP_IDENTIFIER,
+      profile_uuid:          profile_uuid,
+      code_sign_identity:    "iPhone Distribution"
+    )
+
+    # ── Step 4: Build archive & export IPA ───────────────────────────────
+    build_number = ENV["BUILD_NUMBER"] || options[:build_number]
+    UI.message("Building archive with build number: #{build_number}")
+
     build_app(
-      workspace: "Runner.xcworkspace",
-      scheme: "Runner",
-      clean: true,
-      export_method: "app-store",
+      workspace:        "Runner.xcworkspace",
+      scheme:           "Runner",
+      clean:            true,
+      export_method:    "app-store",
       output_directory: "./build/ios/ipa",
-      output_name: "met_schedule.ipa",
+      output_name:      "met_schedule.ipa",
       export_options: {
-        method: "app-store",
-        teamID: "5P3YPGQD6T",
-        signingStyle: "automatic"
+        method:               "app-store",
+        teamID:               TEAM_ID,
+        signingStyle:         "manual",
+        provisioningProfiles: {
+          APP_IDENTIFIER => profile_uuid
+        }
       },
-      xcargs: "-allowProvisioningUpdates -authenticationKeyIssuerID #{issuer_id} -authenticationKeyID #{key_id} -authenticationKeyPath #{key_path}"
+      # Pass API key so xcodebuild can resolve notarization/signing without devices
+      xcargs: "-allowProvisioningUpdates " \
+              "-authenticationKeyIssuerID #{issuer_id} " \
+              "-authenticationKeyID #{key_id} " \
+              "-authenticationKeyPath #{key_path}"
     )
 
-    # 5. Upload generated IPA to TestFlight
+    # ── Step 5: Upload to TestFlight ─────────────────────────────────────
     upload_to_testflight(
-      api_key: api_key,
+      api_key:                          api_key,
       skip_waiting_for_build_processing: true,
-      skip_submission: true
+      skip_submission:                   true
     )
   end
 end
