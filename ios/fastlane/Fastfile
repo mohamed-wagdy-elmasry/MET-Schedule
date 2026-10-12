@@ -122,8 +122,6 @@ platform :ios do
       app_identifier:                      APP_IDENTIFIER,
       team_id:                             TEAM_ID,
       provisioning_name:                   "MET Schedule AppStore",
-      adhoc:                               false,
-      development:                         false,
       ignore_profiles_with_different_name: false,
       force:                               true
     )
