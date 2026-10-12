@@ -71,6 +71,9 @@ platform :ios do
         keychain_name:        is_ci ? keychain_name : nil,
         keychain_password:    is_ci ? keychain_password : nil
       )
+      if is_ci
+        sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k #{keychain_password} #{keychain_path}") rescue nil
+      end
     else
       # Check and free a slot if 2 distribution certs exist on Apple Developer
       begin
@@ -107,6 +110,9 @@ platform :ios do
         keychain_path:         is_ci ? keychain_path : nil,
         keychain_password:     is_ci ? keychain_password : nil
       )
+      if is_ci
+        sh("security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k #{keychain_password} #{keychain_path}") rescue nil
+      end
     end
 
     # ── Step 2: App Store Provisioning Profile ─────────────────────────────
@@ -116,6 +122,8 @@ platform :ios do
       app_identifier:                      APP_IDENTIFIER,
       team_id:                             TEAM_ID,
       provisioning_name:                   "MET Schedule AppStore",
+      adhoc:                               false,
+      development:                         false,
       ignore_profiles_with_different_name: false,
       force:                               true
     )
