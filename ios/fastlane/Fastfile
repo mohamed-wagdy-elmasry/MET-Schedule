@@ -69,15 +69,15 @@ platform :ios do
     end
 
     # ── Step 2: App Store Provisioning Profile ─────────────────────────────
-    UI.message("Fetching App Store provisioning profile…")
+    UI.message("Fetching/regenerating App Store provisioning profile…")
     get_provisioning_profile(
       api_key:                      api_key,
       app_identifier:               APP_IDENTIFIER,
       team_id:                      TEAM_ID,
       provisioning_name:            "MET Schedule AppStore",
       ignore_profiles_with_different_name: false,
-      skip_certificate_verification: true,
-      readonly:                     false  # Create if missing
+      force:                        true,  # Regenerate to ensure profile includes the new certificate
+      readonly:                     false
     )
 
     profile_path = lane_context[SharedValues::SIGH_PROFILE_PATH]
@@ -93,7 +93,7 @@ platform :ios do
       team_id:               TEAM_ID,
       bundle_identifier:     APP_IDENTIFIER,
       profile_uuid:          profile_uuid,
-      code_sign_identity:    "iPhone Distribution"
+      code_sign_identity:    "Apple Distribution"
     )
 
     # ── Step 4: Build archive & export IPA ───────────────────────────────
