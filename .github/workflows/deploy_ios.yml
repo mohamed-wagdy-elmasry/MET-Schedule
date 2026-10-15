@@ -51,9 +51,9 @@ jobs:
             CALCULATED_BUILD="${{ github.event.inputs.build_number }}"
             echo "Using manual build number: $CALCULATED_BUILD"
           else
-            # Ensure build number is strictly greater than previously uploaded builds (minimum 7)
-            CALCULATED_BUILD=$(( 6 + ${{ github.run_number }} ))
-            echo "Auto-calculated build number (6 + run_number): $CALCULATED_BUILD"
+            # Ensure build number is strictly greater than previously uploaded builds (latest rejected build was 20)
+            CALCULATED_BUILD=$(( 20 + ${{ github.run_number }} ))
+            echo "Auto-calculated build number (20 + run_number): $CALCULATED_BUILD"
           fi
           echo "BUILD_NUMBER=$CALCULATED_BUILD" >> $GITHUB_ENV
           echo "build_number=$CALCULATED_BUILD" >> $GITHUB_OUTPUT
